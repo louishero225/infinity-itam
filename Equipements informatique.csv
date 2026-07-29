@@ -1,0 +1,42 @@
+﻿"Nom device","Identifiant ","Type device","Marque / Modèle","Numéro de série","Adresse MAC / IP","Utilisateur assigné","Fonction / Service","Date d’acquisition","Statut / État","Observations","Pièces jointes"
+"MONITEUR HP 24 POUCES","PER-001","Moniteur","HP M24F","3CM33802W5",,"Médéric Joël GBAGBA","IT","12/31/2024","En Service","Moniteur en bon état de fonctionnement ","1"
+"PC HP SUPPORT ","PC-001","Ordinateur","HP /  LAPTOP 15-fd0000ca",,"CC:47:40:0B:DA:68","Koffi Guillaume BADOU","IT","1/1/2025","En Service","Core i5 13th gen
+Ram : 8GB
+SSD: 1To","0"
+"IMPRIMANTE CENTRALE ","IMP-001","Imprimante","RICOH / MP C3003","E154MA32133","00:26:73:91:FD:68 / 192.168.1.100",,"IAG","1/1/2025","En Service","Imprimante principale  
+CANON C5535i","0"
+"IMPRIMANTE HP TANK 580-590","PER-002","Imprimante","HP/  Smart Tank 580-590 ","CN39I6C0TV","64:4E:D7:8D:E9:7C / 192.168.1.71","Joelle BAH","IAG","1/1/2025","En Service","Imprimante  en bon état de fonctionnement 
+connectée en WIFI ","0"
+"HP Color LaserJet MFP M183fw","IMP-003","Imprimante","HP /  MFP M183fw",,"74:97:79:8F:88:20 / 192.168.1.140",,"Comptabilité",,"En Service",,"0"
+"INFINIX 11 PRO","TEL-001","Téléphone","INFINIX / X697","IMEI: 353469512363797 - 353469512363805",,"Koffi Guillaume BADOU","IT",,"En Service","Vieux téléphone à changer prochainement ","0"
+"SAMSUNG A06","TEL-002","Téléphone","SAMSUNG / A06","IMEI 359122724639561 / 359186554639561",,"Ali Youssouf BAMBA","IAF","4/28/2025","En Service","code: 000111
+date de mise en service 28-04-2025
+
+Numéro de téléphone 0718130030","1"
+"INFINIX HOT 40i","TEL-003","Téléphone","INFINIX / X6528","imei: 352329941711423 / 352329941711431",,"Salimata TRAORE","IAG","1/1/2025","En Service","Compte google associé: responsableisit@gmail.com","0"
+"SAMSUNG A06","TEL-004","Téléphone","SAMSUNG / A06",,,"CRINIS CARE","IAG","5/7/2025","En Service","Compte Gmail ---  criniscare@gmail.com  pwd: Infinity2025.","0"
+"PC HP ELITEBOOK 840 G3 - CHARGE CLIENTELE ","IAGPC-010","Ordinateur","HP / ELITEBOOK 840 G3",,"B4:69:21:09:2A:DB",,"IAG",,"En Service","Ram: 8Go
+Core i5-6200
+Stockage: 256Gb","0"
+"SAMSUNG A06","TEL-005","Téléphone","SAMSUNG / A06","Imei1: 351233871601912",,"Azia Laetitia BLE","IAP","6/2/2025","En Service","Code : 000111
+date de mise en service : 02-06-2025
+compte gmail: ","0"
+"SAMSUNG A06","TEL-006","Téléphone","SAMSUNG / A06","Imei: 351398414873649 / 355496844873647",,"Abe Jean Philippe Vianney ABETSO","IAP","6/10/2025","En Service","Date de remise à Vianney 17/06/2025
+code: 000777
+","0"
+"SAMSUNG A06","TEL-007","Téléphone","SAMSUNG / A06","Imei: 351233873823480 / 3528264483823482",,"Etienne KOFFI","IAG","6/10/2025","En Service","Date de remise à Etienne: 17/06/2025
+Code: 000333
+compte google: criniscare79@gmail.com / 1Nfinity@2420
+Numero de telephone 0716306166 
+compte wave associé code: 2420","0"
+"SAMSUNG A06","TEL-008","Téléphone","SAMSUNG / A06","Imei: 350719582561305 / 358393332561304",,"Ibrahim N'DIAYE","IAC","6/14/2025","En Service","code: 000777
+compte google: iacinfinity06@gmail.com / 1Nfinity@2420
+Date de remise à Ibrahim: 20-06-2025","0"
+"PC HP ELITEBOOK 840 G5 - COMMERCIAL B2B","IAGPC-011","Ordinateur","HP / ELITEBOOK 840 G5",,,,"IT","6/17/2025","En Service","ram: 16Go
+Core I5 8350U
+Stockage 512Gb
+Date de remise: 23-06-2025","0"
+"SAMSUNG A06","TEL-009","Téléphone","SAMSUNG / A06","Imei: 351550584640790 / 354184534640796",,"Abdoulaye Vadjeneka MEITE","IT",,"En Service","Ram 4Go / Stockage 64Go
+compte google: iatdev80@gmail.com / pwd: 1Nfinity@2420","0"
+"SAMSUNG A06","TEL-010",,"SAMSUNG / A06 ","Imei: 351550583856629 / 354184533856625",,"Koffi Guillaume BADOU","IT","7/13/2025",,"Ram 4Go / Stockage 64Go
+compte google: ","0"
