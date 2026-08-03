@@ -82,6 +82,65 @@ function parseEmployeeName(fullName) {
   return { prenom: parts.slice(0, -1).join(" "), nom: parts[parts.length - 1] };
 }
 
+const GENERIC_ACCOUNTS = new Set([
+  "support it",
+  "it",
+  "comptabilite",
+  "compta",
+  "rh",
+  "ressources humaines",
+  "direction",
+  "iag",
+  "iat",
+  "iap",
+  "iac",
+  "iaf",
+]);
+
+function isGenericDestinataire(name) {
+  if (!name?.trim()) return false;
+  const key = normalize(name);
+  if (GENERIC_ACCOUNTS.has(key)) return true;
+  if (key.includes("infinity africa")) return true;
+  if (key.includes("support")) return true;
+  const tokens = key.split(/\s+/).filter(Boolean);
+  if (tokens.length === 1 && tokens[0].length <= 4) return true;
+  return false;
+}
+
+function classifyExcelDestinataire(utilisateur, departement) {
+  const user = utilisateur?.trim() || "";
+  const dept = departement?.trim() || "";
+
+  if (user && !isGenericDestinataire(user)) {
+    return { beneficiaire_type: "employe", employeName: user };
+  }
+
+  const entiteNom = dept || user;
+  if (!entiteNom) return null;
+
+  const key = normalize(entiteNom);
+  const entiteType = key.includes("infinity") || key === "iag" ? "societe" : "departement";
+  return {
+    beneficiaire_type: entiteType,
+    entiteNom,
+    entiteType,
+  };
+}
+
+function entiteCodeFromNom(nom) {
+  const n = nom.trim();
+  const upper = n.toUpperCase();
+  if (/^[A-Z0-9-]{2,12}$/.test(upper.replace(/\s/g, ""))) {
+    return upper.replace(/\s/g, "").slice(0, 20);
+  }
+  const key = normalize(n)
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "")
+    .slice(0, 24);
+  return (key || "entite").toUpperCase();
+}
+
 function mapEtat(excelEtat, utilisateur, departement) {
   const e = normalize(excelEtat);
   let statut = "Stock";
@@ -325,23 +384,26 @@ function reconcile(excelRows, dbMateriels, dbEmployes, dbAttributions) {
     const activeAttr = dbAttributions.filter((a) => a.materiel_id === materiel?.id);
 
     if (statut === "Attribué") {
-      if (row.utilisateur && !matchEmploye(row.utilisateur, employesWorking)) {
-        const parsed = parseEmployeeName(row.utilisateur);
-        plan.employesCreate.push({
-          key: normalize(row.utilisateur),
-          prenom: parsed.prenom,
-          nom: parsed.nom,
-          departement: row.departement || "IAG",
-          excelName: row.utilisateur,
-        });
+      const dest = classifyExcelDestinataire(row.utilisateur, row.departement);
+
+      if (dest?.beneficiaire_type === "employe" && dest.employeName) {
+        if (!matchEmploye(dest.employeName, employesWorking)) {
+          const parsed = parseEmployeeName(dest.employeName);
+          plan.employesCreate.push({
+            key: normalize(dest.employeName),
+            prenom: parsed.prenom,
+            nom: parsed.nom,
+            departement: row.departement || "IAG",
+            excelName: dest.employeName,
+          });
+        }
       }
 
       plan.attributionsCreate.push({
         materielId: materiel?.id ?? null,
         code_materiel: row.code_materiel,
         row,
-        employeName: row.utilisateur,
-        departement: row.departement,
+        dest,
       });
 
       for (const a of activeAttr) {
@@ -383,21 +445,52 @@ function reconcile(excelRows, dbMateriels, dbEmployes, dbAttributions) {
 }
 
 async function loadDatabase(supabase) {
-  const [materiels, employes, attributions] = await Promise.all([
+  const [materiels, employes, attributions, entites] = await Promise.all([
     supabase.from("materiels").select("*"),
     supabase.from("employes").select("*"),
     supabase.from("attributions").select("*").eq("statut", "Actif"),
+    supabase.from("entites").select("*"),
   ]);
 
   if (materiels.error) throw new Error(materiels.error.message);
   if (employes.error) throw new Error(employes.error.message);
   if (attributions.error) throw new Error(attributions.error.message);
+  if (entites.error && entites.error.code !== "42P01") {
+    throw new Error(entites.error.message);
+  }
 
   return {
     materiels: materiels.data ?? [],
     employes: employes.data ?? [],
     attributions: attributions.data ?? [],
+    entites: entites.data ?? [],
   };
+}
+
+async function resolveEntiteId(supabase, entites, nom, type = "departement") {
+  const trimmed = nom.trim();
+  const code = entiteCodeFromNom(trimmed);
+  const existing = entites.find(
+    (e) => normalize(e.code) === normalize(code) || normalize(e.nom) === normalize(trimmed)
+  );
+  if (existing) return existing.id;
+
+  const { data, error } = await supabase
+    .from("entites")
+    .insert({ code, nom: trimmed, type, actif: true })
+    .select("*")
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      const retry = entites.find((e) => normalize(e.code) === normalize(code));
+      if (retry) return retry.id;
+    }
+    throw new Error(error.message);
+  }
+
+  entites.push(data);
+  return data.id;
 }
 
 async function executePlan(supabase, plan) {
@@ -411,6 +504,7 @@ async function executePlan(supabase, plan) {
   writeFileSync(join(reportsDir, `backup-${ts}.json`), JSON.stringify(db, null, 2));
 
   let employes = [...db.employes];
+  let entites = [...(db.entites ?? [])];
   report.created.employes = 0;
   for (const e of plan.employesCreate) {
     const { data, error } = await supabase
@@ -509,20 +603,31 @@ async function executePlan(supabase, plan) {
     const payload = materielPayload(attr.row);
     if (payload.statut !== "Attribué") continue;
 
-    let employe_id = null;
-    let beneficiaire_type = "departement";
-    let beneficiaire_label = attr.departement || "IAG";
+    const dest = attr.dest;
+    if (!dest) continue;
 
-    if (attr.employeName) {
-      const emp = matchEmp(attr.employeName);
-      if (emp) {
-        employe_id = emp.id;
-        beneficiaire_type = "employe";
-        beneficiaire_label = "Employé";
-      } else {
+    let employe_id = null;
+    let entite_id = null;
+    let beneficiaire_type = dest.beneficiaire_type;
+    let beneficiaire_label = null;
+
+    if (dest.beneficiaire_type === "employe" && dest.employeName) {
+      const emp = matchEmp(dest.employeName);
+      if (!emp) {
+        report.errors.push(`Attribution ${attr.code_materiel}: employé introuvable (${dest.employeName})`);
         continue;
       }
-    } else if (!attr.departement) {
+      employe_id = emp.id;
+      beneficiaire_label = "Employé";
+    } else if (dest.entiteNom) {
+      try {
+        entite_id = await resolveEntiteId(supabase, entites, dest.entiteNom, dest.entiteType ?? "departement");
+        beneficiaire_label = dest.entiteNom;
+      } catch (e) {
+        report.errors.push(`Attribution ${attr.code_materiel}: ${e.message}`);
+        continue;
+      }
+    } else {
       continue;
     }
 
@@ -531,6 +636,7 @@ async function executePlan(supabase, plan) {
     const { error } = await supabase.from("attributions").insert({
       materiel_id: materielId,
       employe_id,
+      entite_id,
       date_attribution: attr.row.date_achat ?? today,
       statut: "Actif",
       numero_attribution: numero ?? undefined,

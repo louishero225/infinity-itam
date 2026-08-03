@@ -11,7 +11,9 @@
     "import:inventaire": "node scripts/import-inventaire.mjs",
     "import:inventaire:execute": "node scripts/import-inventaire.mjs --execute",
     "normalize:nomenclature": "node scripts/normalize-nomenclature.mjs",
-    "normalize:nomenclature:execute": "node scripts/normalize-nomenclature.mjs --execute"
+    "normalize:nomenclature:execute": "node scripts/normalize-nomenclature.mjs --execute",
+    "migrate:entites": "node scripts/migrate-entites.mjs",
+    "migrate:entites:execute": "node scripts/migrate-entites.mjs --execute"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

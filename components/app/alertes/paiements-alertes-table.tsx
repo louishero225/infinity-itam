@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useSortableRows } from "@/components/app/sortable-table-head";
 
 type PaiementAlerteRow = {
   paiement_id: string;
@@ -31,6 +32,22 @@ type PaiementAlerteRow = {
 };
 
 export function PaiementsAlertesTable({ rows }: { rows: PaiementAlerteRow[] }) {
+  const sortAccessors = React.useMemo(
+    () => ({
+      licence: (r: PaiementAlerteRow) => r.licence_nom,
+      editeur: (r: PaiementAlerteRow) => r.editeur,
+      gestionnaire: (r: PaiementAlerteRow) =>
+        r.gestionnaire_nom ? `${r.gestionnaire_nom} ${r.gestionnaire_prenom}` : "",
+      date: (r: PaiementAlerteRow) => r.date_paiement_prevue,
+      montant: (r: PaiementAlerteRow) => r.montant_prevu,
+      retard: (r: PaiementAlerteRow) => r.jours_retard,
+      urgence: (r: PaiementAlerteRow) => r.niveau_urgence_paiement,
+    }),
+    []
+  );
+
+  const { sortedData, renderHead } = useSortableRows(rows, sortAccessors);
+
   const getUrgenceBadge = (niveau: string) => {
     switch (niveau) {
       case "Très en retard":
@@ -59,17 +76,17 @@ export function PaiementsAlertesTable({ rows }: { rows: PaiementAlerteRow[] }) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Licence</TableHead>
-            <TableHead>Éditeur</TableHead>
-            <TableHead>Gestionnaire</TableHead>
-            <TableHead>Date prévue</TableHead>
-            <TableHead>Montant</TableHead>
-            <TableHead>Retard</TableHead>
-            <TableHead>Urgence</TableHead>
+            {renderHead("licence", "Licence")}
+            {renderHead("editeur", "Éditeur")}
+            {renderHead("gestionnaire", "Gestionnaire")}
+            {renderHead("date", "Date prévue")}
+            {renderHead("montant", "Montant")}
+            {renderHead("retard", "Retard")}
+            {renderHead("urgence", "Urgence")}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((row) => (
+          {sortedData.map((row) => (
             <TableRow key={row.paiement_id}>
               <TableCell className="font-medium">{row.licence_nom}</TableCell>
               <TableCell>{row.editeur ?? "—"}</TableCell>
@@ -113,7 +130,7 @@ export function PaiementsAlertesTable({ rows }: { rows: PaiementAlerteRow[] }) {
               <TableCell>{getUrgenceBadge(row.niveau_urgence_paiement)}</TableCell>
             </TableRow>
           ))}
-          {rows.length === 0 && (
+          {sortedData.length === 0 && (
             <TableRow>
               <TableCell colSpan={7} className="text-center text-muted-foreground">
                 Aucun paiement en attente

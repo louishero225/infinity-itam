@@ -15,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useSortableRows } from "@/components/app/sortable-table-head";
 
 type AlerteRow = {
   id: string | null;
@@ -32,6 +33,20 @@ type AlerteRow = {
 
 export function AlertesTable({ rows }: { rows: AlerteRow[] }) {
   const [loading, setLoading] = React.useState<string | null>(null);
+
+  const sortAccessors = React.useMemo(
+    () => ({
+      type: (r: AlerteRow) => r.type,
+      titre: (r: AlerteRow) => r.titre,
+      priorite: (r: AlerteRow) => r.priorite,
+      urgence: (r: AlerteRow) => r.urgence,
+      echeance: (r: AlerteRow) => r.date_echeance,
+      lie: (r: AlerteRow) => r.code_materiel ?? r.licence_nom,
+    }),
+    []
+  );
+
+  const { sortedData, renderHead } = useSortableRows(rows, sortAccessors);
 
   const handleTraiter = async (id: string) => {
     try {
@@ -90,17 +105,17 @@ export function AlertesTable({ rows }: { rows: AlerteRow[] }) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Type</TableHead>
-            <TableHead>Titre</TableHead>
-            <TableHead>Priorité</TableHead>
-            <TableHead>Urgence</TableHead>
-            <TableHead>Échéance</TableHead>
-            <TableHead>Lié à</TableHead>
+            {renderHead("type", "Type")}
+            {renderHead("titre", "Titre")}
+            {renderHead("priorite", "Priorité")}
+            {renderHead("urgence", "Urgence")}
+            {renderHead("echeance", "Échéance")}
+            {renderHead("lie", "Lié à")}
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((row) => (
+          {sortedData.map((row) => (
             <TableRow key={row.id}>
               <TableCell className="capitalize">{row.type ?? "—"}</TableCell>
               <TableCell>
@@ -157,7 +172,7 @@ export function AlertesTable({ rows }: { rows: AlerteRow[] }) {
               </TableCell>
             </TableRow>
           ))}
-          {rows.length === 0 && (
+          {sortedData.length === 0 && (
             <TableRow>
               <TableCell colSpan={7} className="text-center text-muted-foreground">
                 Aucune alerte active

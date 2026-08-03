@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DemandeAchatFormDialog } from "./demande-achat-form-dialog";
+import { useSortableRows } from "@/components/app/sortable-table-head";
 
 type DemandeRow = {
   id: string | null;
@@ -43,6 +44,20 @@ type DemandeRow = {
 
 export function AchatsTable({ rows }: { rows: DemandeRow[] }) {
   const [loading, setLoading] = React.useState<string | null>(null);
+
+  const sortAccessors = React.useMemo(
+    () => ({
+      numero: (r: DemandeRow) => r.numero_demande,
+      materiel: (r: DemandeRow) => r.materiel_description,
+      fournisseur: (r: DemandeRow) => r.fournisseur,
+      montant: (r: DemandeRow) => r.montant_total,
+      statut: (r: DemandeRow) => r.statut,
+      date: (r: DemandeRow) => r.date_demande,
+    }),
+    []
+  );
+
+  const { sortedData, renderHead } = useSortableRows(rows, sortAccessors);
 
   const handleDelete = async (id: string, numero: string) => {
     if (!confirm(`Supprimer la demande "${numero}" ?`)) return;
@@ -114,17 +129,17 @@ export function AchatsTable({ rows }: { rows: DemandeRow[] }) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>N° Demande</TableHead>
-            <TableHead>Matériel</TableHead>
-            <TableHead>Fournisseur</TableHead>
-            <TableHead>Montant</TableHead>
-            <TableHead>Statut</TableHead>
-            <TableHead>Workflow</TableHead>
+            {renderHead("numero", "N° Demande")}
+            {renderHead("materiel", "Matériel")}
+            {renderHead("fournisseur", "Fournisseur")}
+            {renderHead("montant", "Montant")}
+            {renderHead("statut", "Statut")}
+            {renderHead("date", "Workflow")}
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((row) => {
+          {sortedData.map((row) => {
             const workflowActions = getWorkflowActions(row.statut);
             const statutProtege = row.statut && ["Approuvée", "Décaissée", "Réceptionnée", "En production"].includes(row.statut);
             return (
@@ -226,7 +241,7 @@ export function AchatsTable({ rows }: { rows: DemandeRow[] }) {
               </TableRow>
             );
           })}
-          {rows.length === 0 && (
+          {sortedData.length === 0 && (
             <TableRow>
               <TableCell colSpan={7} className="text-center text-muted-foreground">
                 Aucune demande d'achat

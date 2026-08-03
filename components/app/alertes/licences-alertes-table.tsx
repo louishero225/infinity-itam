@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useSortableRows } from "@/components/app/sortable-table-head";
 
 type LicenceAlerteRow = {
   id: string;
@@ -26,6 +27,22 @@ type LicenceAlerteRow = {
 };
 
 export function LicencesAlertesTable({ rows }: { rows: LicenceAlerteRow[] }) {
+  const sortAccessors = React.useMemo(
+    () => ({
+      nom: (r: LicenceAlerteRow) => r.nom,
+      editeur: (r: LicenceAlerteRow) => r.editeur,
+      gestionnaire: (r: LicenceAlerteRow) =>
+        r.gestionnaire_nom ? `${r.gestionnaire_nom} ${r.gestionnaire_prenom}` : "",
+      expiration: (r: LicenceAlerteRow) => r.date_expiration,
+      jours: (r: LicenceAlerteRow) => r.jours_avant_expiration,
+      cout: (r: LicenceAlerteRow) => r.cout,
+      urgence: (r: LicenceAlerteRow) => r.niveau_urgence,
+    }),
+    []
+  );
+
+  const { sortedData, renderHead } = useSortableRows(rows, sortAccessors);
+
   const getUrgenceBadge = (niveau: string) => {
     switch (niveau) {
       case "Expirée":
@@ -53,17 +70,17 @@ export function LicencesAlertesTable({ rows }: { rows: LicenceAlerteRow[] }) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Licence</TableHead>
-            <TableHead>Éditeur</TableHead>
-            <TableHead>Gestionnaire</TableHead>
-            <TableHead>Expiration</TableHead>
-            <TableHead>Jours restants</TableHead>
-            <TableHead>Coût</TableHead>
-            <TableHead>Urgence</TableHead>
+            {renderHead("nom", "Licence")}
+            {renderHead("editeur", "Éditeur")}
+            {renderHead("gestionnaire", "Gestionnaire")}
+            {renderHead("expiration", "Expiration")}
+            {renderHead("jours", "Jours restants")}
+            {renderHead("cout", "Coût")}
+            {renderHead("urgence", "Urgence")}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((row) => (
+          {sortedData.map((row) => (
             <TableRow key={row.id}>
               <TableCell className="font-medium">{row.nom}</TableCell>
               <TableCell>{row.editeur ?? "—"}</TableCell>
@@ -109,7 +126,7 @@ export function LicencesAlertesTable({ rows }: { rows: LicenceAlerteRow[] }) {
               <TableCell>{getUrgenceBadge(row.niveau_urgence)}</TableCell>
             </TableRow>
           ))}
-          {rows.length === 0 && (
+          {sortedData.length === 0 && (
             <TableRow>
               <TableCell colSpan={7} className="text-center text-muted-foreground">
                 Aucune alerte de renouvellement

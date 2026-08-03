@@ -3,6 +3,12 @@
 import { DataTable } from "@/components/app/data-table";
 import { RestitutionModal } from "@/components/app/attributions/restitution-modal";
 import { FichesButtons } from "@/components/app/attributions/fiches-buttons";
+import {
+  BeneficiaireBadge,
+  beneficiaireSearchText,
+  beneficiaireSortKey,
+} from "@/components/app/beneficiaire/beneficiaire-badge";
+import type { EntiteMini } from "@/lib/utils/beneficiaire";
 
 type AttributionRow = {
   id: string;
@@ -12,60 +18,76 @@ type AttributionRow = {
   beneficiaire_label?: string | null;
   materiel: { id: string; code_materiel: string; type: string } | null;
   employe: { id: string; prenom: string; nom: string; departement: string } | null;
+  entite?: EntiteMini | null;
 };
 
 export function AttributionsTable({ rows }: { rows: AttributionRow[] }) {
   return (
     <DataTable
       data={rows}
-      searchPlaceholder="Rechercher (code matériel, employé, département...)"
+      getRowKey={(r) => r.id}
+      searchPlaceholder="Rechercher (code matériel, employé, entité...)"
       columns={[
         {
           key: "materiel",
           header: "Matériel",
           cell: (r) => r.materiel?.code_materiel ?? "—",
           searchableText: (r) => `${r.materiel?.code_materiel ?? ""} ${r.materiel?.type ?? ""}`,
+          sortValue: (r) => r.materiel?.code_materiel ?? "",
         },
         {
           key: "employe",
-          header: "Bénéficiaire",
-          cell: (r) => {
-            if (r.employe) {
-              return `${r.employe.prenom} ${r.employe.nom} (${r.employe.departement})`;
-            }
-
-            if (r.beneficiaire_type === "societe") {
-              return r.beneficiaire_label ?? "Société";
-            }
-
-            if (r.beneficiaire_type === "departement") {
-              return r.beneficiaire_label ?? "Département";
-            }
-
-            return "—";
-          },
-          searchableText: (r) => {
-            if (r.employe) {
-              return `${r.employe.prenom} ${r.employe.nom} ${r.employe.departement}`;
-            }
-            return `${r.beneficiaire_type ?? ""} ${r.beneficiaire_label ?? ""}`;
-          },
+          header: "Destinataire",
+          cell: (r) => (
+            <BeneficiaireBadge
+              beneficiaire_type={r.beneficiaire_type}
+              beneficiaire_label={r.beneficiaire_label}
+              employe={r.employe}
+              entite={r.entite}
+            />
+          ),
+          searchableText: (r) =>
+            beneficiaireSearchText({
+              beneficiaire_type: r.beneficiaire_type,
+              beneficiaire_label: r.beneficiaire_label,
+              employe: r.employe,
+              entite: r.entite,
+            }),
+          sortValue: (r) =>
+            beneficiaireSortKey({
+              beneficiaire_type: r.beneficiaire_type,
+              beneficiaire_label: r.beneficiaire_label,
+              employe: r.employe,
+              entite: r.entite,
+            }),
         },
         {
           key: "date",
           header: "Date",
           cell: (r) => r.date_attribution,
           searchableText: (r) => r.date_attribution,
+          sortValue: (r) => r.date_attribution,
+        },
+        {
+          key: "statut",
+          header: "Statut",
+          cell: (r) => r.statut ?? "—",
+          sortValue: (r) => r.statut ?? "",
         },
         {
           key: "fiches",
           header: "Fiches",
+          sortable: false,
           cell: (r) => <FichesButtons attributionId={r.id} />,
         },
         {
           key: "actions",
           header: "Actions",
-          cell: (r) => (r.materiel ? <RestitutionModal attributionId={r.id} materielId={r.materiel.id} /> : null),
+          sortable: false,
+          cell: (r) =>
+            r.materiel ? (
+              <RestitutionModal attributionId={r.id} materielId={r.materiel.id} />
+            ) : null,
         },
       ]}
     />

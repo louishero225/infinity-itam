@@ -7,6 +7,8 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { createMateriel, updateMateriel } from "@/app/(app)/materiels/actions";
+import { getEntites, type EntiteRow } from "@/app/(app)/entites/actions";
+import { EntiteSelect } from "@/components/app/beneficiaire/entite-select";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { uploadMaterielPhoto } from "@/lib/supabase/storage";
 import { MATERIEL_TYPES, codePrefixForType } from "@/lib/utils/materiel-taxonomy";
@@ -55,6 +57,7 @@ const schema = z
     etat: z.enum(["Neuf", "Bon", "Moyen", "À réparer", "Hors service"]),
     beneficiaire_type: z.enum(["employe", "departement", "societe"]).optional(),
     employe_id: z.string().optional(),
+    entite_id: z.string().optional(),
     beneficiaire_label: z.string().optional(),
     date_attribution: z.string().optional(),
     date_achat: z.string().optional(),
@@ -79,11 +82,11 @@ const schema = z
       });
     }
 
-    if (bt !== "employe" && !values.beneficiaire_label) {
+    if (bt !== "employe" && !values.entite_id && !values.beneficiaire_label) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["beneficiaire_label"],
-        message: "Veuillez renseigner le bénéficiaire.",
+        path: ["entite_id"],
+        message: "Veuillez sélectionner une entité.",
       });
     }
   });
@@ -103,6 +106,7 @@ export function MaterielFormDialog({
 }) {
   const [open, setOpen] = React.useState(false);
   const [employes, setEmployes] = React.useState<EmployeOption[]>([]);
+  const [entites, setEntites] = React.useState<EntiteRow[]>([]);
   const [loadingEmployes, setLoadingEmployes] = React.useState(false);
   const [uploadingPhoto, setUploadingPhoto] = React.useState(false);
   const [photoPreview, setPhotoPreview] = React.useState<string | null>(null);
@@ -130,13 +134,19 @@ export function MaterielFormDialog({
       try {
         setLoadingEmployes(true);
         const supabase = createSupabaseBrowserClient();
-        const { data, error } = await supabase
-          .from("employes")
-          .select("id, prenom, nom, departement")
-          .order("prenom")
-          .returns<EmployeOption[]>();
-        if (error) throw new Error(error.message);
-        if (!cancelled) setEmployes(data ?? []);
+        const [empRes, entiteList] = await Promise.all([
+          supabase
+            .from("employes")
+            .select("id, prenom, nom, departement")
+            .order("prenom")
+            .returns<EmployeOption[]>(),
+          getEntites(),
+        ]);
+        if (empRes.error) throw new Error(empRes.error.message);
+        if (!cancelled) {
+          setEmployes(empRes.data ?? []);
+          setEntites(entiteList);
+        }
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Erreur de chargement des employés");
       } finally {
@@ -172,7 +182,7 @@ export function MaterielFormDialog({
         const supabase = createSupabaseBrowserClient();
         const { data, error } = await supabase
           .from("attributions")
-          .select("beneficiaire_type, beneficiaire_label, employe_id, date_attribution")
+          .select("beneficiaire_type, beneficiaire_label, employe_id, entite_id, date_attribution")
           .eq("materiel_id", materielId)
           .eq("statut", "Actif")
           .order("date_attribution", { ascending: false })
@@ -180,6 +190,7 @@ export function MaterielFormDialog({
             beneficiaire_type: "employe" | "departement" | "societe" | null;
             beneficiaire_label: string | null;
             employe_id: string | null;
+            entite_id: string | null;
             date_attribution: string;
           }>();
 
@@ -189,6 +200,7 @@ export function MaterielFormDialog({
         form.setValue("beneficiaire_type", (data.beneficiaire_type ?? "employe") as any);
         form.setValue("beneficiaire_label", data.beneficiaire_label ?? undefined);
         form.setValue("employe_id", data.employe_id ?? undefined);
+        form.setValue("entite_id", data.entite_id ?? undefined);
         form.setValue("date_attribution", data.date_attribution ?? undefined);
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Erreur lors du chargement de l'attribution");
@@ -258,6 +270,10 @@ export function MaterielFormDialog({
             values.statut === "Attribué" ? values.beneficiaire_type ?? "employe" : null,
           beneficiaire_label:
             values.statut === "Attribué" ? values.beneficiaire_label || null : null,
+          entite_id:
+            values.statut === "Attribué" && (values.beneficiaire_type ?? "employe") !== "employe"
+              ? values.entite_id || null
+              : null,
           employe_id:
             values.statut === "Attribué" && (values.beneficiaire_type ?? "employe") === "employe"
               ? values.employe_id || null
@@ -289,6 +305,10 @@ export function MaterielFormDialog({
             values.statut === "Attribué" ? values.beneficiaire_type ?? "employe" : null,
           beneficiaire_label:
             values.statut === "Attribué" ? values.beneficiaire_label || null : null,
+          entite_id:
+            values.statut === "Attribué" && (values.beneficiaire_type ?? "employe") !== "employe"
+              ? values.entite_id || null
+              : null,
           employe_id:
             values.statut === "Attribué" && (values.beneficiaire_type ?? "employe") === "employe"
               ? values.employe_id || null
@@ -524,9 +544,9 @@ export function MaterielFormDialog({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="employe">Employé</SelectItem>
-                            <SelectItem value="departement">Département</SelectItem>
-                            <SelectItem value="societe">Société</SelectItem>
+                            <SelectItem value="employe">👤 Personne (employé)</SelectItem>
+                            <SelectItem value="departement">🏢 Département / entité</SelectItem>
+                            <SelectItem value="societe">🏛️ Société</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -582,16 +602,21 @@ export function MaterielFormDialog({
                 ) : (
                   <FormField
                     control={form.control}
-                    name="beneficiaire_label"
+                    name="entite_id"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          {beneficiaireType === "societe" ? "Société" : "Département"}
+                          {beneficiaireType === "societe" ? "Société" : "Département / entité"}
                         </FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder={beneficiaireType === "societe" ? "Nom société" : "Ex: IT"}
-                            {...field}
+                          <EntiteSelect
+                            entites={entites}
+                            type={beneficiaireType === "societe" ? "societe" : "departement"}
+                            value={field.value}
+                            onValueChange={(id, entite) => {
+                              field.onChange(id);
+                              form.setValue("beneficiaire_label", entite.nom);
+                            }}
                           />
                         </FormControl>
                         <FormMessage />

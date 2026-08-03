@@ -72,6 +72,7 @@ export type Database = {
           date_attribution: string
           date_restitution: string | null
           employe_id: string | null
+          entite_id: string | null
           etat_remise: string | null
           etat_restitution: string | null
           id: string
@@ -88,6 +89,7 @@ export type Database = {
           date_attribution: string
           date_restitution?: string | null
           employe_id?: string | null
+          entite_id?: string | null
           etat_remise?: string | null
           etat_restitution?: string | null
           id?: string
@@ -104,11 +106,42 @@ export type Database = {
           date_attribution?: string
           date_restitution?: string | null
           employe_id?: string | null
+          entite_id?: string | null
           etat_remise?: string | null
           etat_restitution?: string | null
           id?: string
           materiel_id?: string | null
           statut?: string | null
+        }
+        Relationships: []
+      }
+      entites: {
+        Row: {
+          actif: boolean
+          code: string
+          created_at: string | null
+          id: string
+          nom: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          actif?: boolean
+          code: string
+          created_at?: string | null
+          id?: string
+          nom: string
+          type?: string
+          updated_at?: string | null
+        }
+        Update: {
+          actif?: boolean
+          code?: string
+          created_at?: string | null
+          id?: string
+          nom?: string
+          type?: string
+          updated_at?: string | null
         }
         Relationships: []
       }

@@ -22,7 +22,7 @@ import { AlertesBadge } from "./alertes-badge";
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { href: "/materiels", label: "Matériel", icon: Laptop },
-  { href: "/employes", label: "Employés", icon: Users },
+  { href: "/destinataires", label: "Destinataires", icon: Users },
   { href: "/attributions", label: "Attributions", icon: ClipboardList },
   { href: "/achats", label: "Achats", icon: ShoppingCart },
   { href: "/alertes", label: "Alertes", icon: AlertCircle },

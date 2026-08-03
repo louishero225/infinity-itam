@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Laptop } from "lucide-react";
 
 import { DataTable } from "@/components/app/data-table";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +21,7 @@ export function EmployesTable({ rows }: { rows: EmployeRow[] }) {
   return (
     <DataTable
       data={rows}
+      getRowKey={(r) => r.id}
       searchPlaceholder="Rechercher (nom, prénom, département, service...)"
       columns={[
         {
@@ -39,7 +39,8 @@ export function EmployesTable({ rows }: { rows: EmployeRow[] }) {
               </div>
             </div>
           ),
-          searchableText: (r) => `${r.prenom} ${r.nom}`,
+          searchableText: (r) => `${r.prenom} ${r.nom} ${r.departement}`,
+          sortValue: (r) => `${r.nom} ${r.prenom}`.trim(),
         },
         {
           key: "fonction",
@@ -53,6 +54,14 @@ export function EmployesTable({ rows }: { rows: EmployeRow[] }) {
             </div>
           ),
           searchableText: (r) => `${r.fonction ?? ""} ${r.service ?? ""}`,
+          sortValue: (r) => r.fonction ?? r.service ?? "",
+        },
+        {
+          key: "departement",
+          header: "Département",
+          cell: (r) => r.departement,
+          sortValue: (r) => r.departement,
+          searchableText: (r) => r.departement,
         },
         {
           key: "materiel",
@@ -71,7 +80,7 @@ export function EmployesTable({ rows }: { rows: EmployeRow[] }) {
               )}
             </div>
           ),
-          searchableText: () => "",
+          sortValue: (r) => r.materiel_actif ?? 0,
         },
       ]}
     />

@@ -65,6 +65,7 @@ export function HistoriqueTable({ rows }: { rows: HistoriqueRow[] }) {
     <>
       <DataTable
         data={rows}
+        getRowKey={(r) => r.id ?? `${r.code_materiel}-${r.date_attribution}`}
         searchPlaceholder="Rechercher (code matériel, employé, statut...)"
         columns={[
         {
@@ -72,34 +73,46 @@ export function HistoriqueTable({ rows }: { rows: HistoriqueRow[] }) {
           header: "Matériel",
           cell: (r) => r.code_materiel ?? "—",
           searchableText: (r) => r.code_materiel ?? "",
+          sortValue: (r) => r.code_materiel,
         },
         {
           key: "employe",
           header: "Employé",
           cell: (r) => `${r.prenom ?? ""} ${r.nom ?? ""}`.trim() || "—",
           searchableText: (r) => `${r.prenom ?? ""} ${r.nom ?? ""}`,
+          sortValue: (r) => `${r.nom ?? ""} ${r.prenom ?? ""}`.trim(),
         },
         {
           key: "date",
           header: "Date attribution",
           cell: (r) => r.date_attribution ?? "—",
           searchableText: (r) => r.date_attribution ?? "",
+          sortValue: (r) => r.date_attribution,
         },
         {
           key: "retour",
           header: "Retour",
           cell: (r) => r.date_restitution ?? "—",
           searchableText: (r) => r.date_restitution ?? "",
+          sortValue: (r) => r.date_restitution,
         },
         {
           key: "statut",
           header: "Statut",
           cell: (r) => r.statut ?? "—",
           searchableText: (r) => r.statut ?? "",
+          sortValue: (r) => r.statut,
+        },
+        {
+          key: "action",
+          header: "Action",
+          cell: (r) => r.action ?? "—",
+          sortValue: (r) => r.action,
         },
         {
           key: "actions",
           header: "Actions",
+          sortable: false,
           cell: (r) => (
             <Button
               variant="ghost"

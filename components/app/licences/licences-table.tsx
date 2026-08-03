@@ -17,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { LicenceFormDialog } from "./licence-form-dialog";
+import { useSortableRows } from "@/components/app/sortable-table-head";
 
 const PaiementsDialog = dynamic(
   () => import("./paiements-dialog").then((mod) => ({ default: mod.PaiementsDialog })),
@@ -54,6 +55,21 @@ type LicenceRow = {
 export function LicencesTable({ rows }: { rows: LicenceRow[] }) {
   const [deleting, setDeleting] = React.useState<string | null>(null);
 
+  const sortAccessors = React.useMemo(
+    () => ({
+      nom: (r: LicenceRow) => r.nom,
+      editeur: (r: LicenceRow) => r.editeur,
+      gestionnaire: (r: LicenceRow) =>
+        r.gestionnaire ? `${r.gestionnaire.nom} ${r.gestionnaire.prenom}` : "",
+      expiration: (r: LicenceRow) => r.date_expiration,
+      postes: (r: LicenceRow) => r.postes_utilises ?? 0,
+      statut: (r: LicenceRow) => r.statut,
+    }),
+    []
+  );
+
+  const { sortedData, renderHead } = useSortableRows(rows, sortAccessors);
+
   const handleDelete = async (id: string, nom: string) => {
     if (!confirm(`Supprimer la licence "${nom}" ?`)) return;
 
@@ -88,17 +104,17 @@ export function LicencesTable({ rows }: { rows: LicenceRow[] }) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Nom</TableHead>
-            <TableHead>Éditeur</TableHead>
-            <TableHead>Gestionnaire</TableHead>
-            <TableHead>Expiration</TableHead>
-            <TableHead>Postes</TableHead>
-            <TableHead>Statut</TableHead>
+            {renderHead("nom", "Nom")}
+            {renderHead("editeur", "Éditeur")}
+            {renderHead("gestionnaire", "Gestionnaire")}
+            {renderHead("expiration", "Expiration")}
+            {renderHead("postes", "Postes")}
+            {renderHead("statut", "Statut")}
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((row) => (
+          {sortedData.map((row) => (
             <TableRow key={row.id}>
               <TableCell className="font-medium">{row.nom}</TableCell>
               <TableCell>{row.editeur ?? "—"}</TableCell>
@@ -153,7 +169,7 @@ export function LicencesTable({ rows }: { rows: LicenceRow[] }) {
               </TableCell>
             </TableRow>
           ))}
-          {rows.length === 0 && (
+          {sortedData.length === 0 && (
             <TableRow>
               <TableCell colSpan={8} className="text-center text-muted-foreground">
                 Aucune licence

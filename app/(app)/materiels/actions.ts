@@ -2,11 +2,53 @@
 
 import { revalidatePath } from "next/cache";
 
+import { resolveEntiteId } from "@/app/(app)/entites/actions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   normalizeMaterielCode,
   normalizeMaterielType,
 } from "@/lib/utils/materiel-taxonomy";
+
+async function resolveAttributionBeneficiaire(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  input: {
+    beneficiaire_type: "employe" | "departement" | "societe";
+    employe_id?: string | null;
+    entite_id?: string | null;
+    beneficiaire_label?: string | null;
+  }
+) {
+  const beneficiaire_type = input.beneficiaire_type;
+  if (beneficiaire_type === "employe") {
+    return {
+      employe_id: input.employe_id!,
+      entite_id: null as string | null,
+      beneficiaire_type,
+      beneficiaire_label: "Employé",
+    };
+  }
+
+  let entite_id = input.entite_id ?? null;
+  let beneficiaire_label = input.beneficiaire_label ?? null;
+
+  if (entite_id) {
+    const { data: entite } = await supabase
+      .from("entites")
+      .select("nom")
+      .eq("id", entite_id)
+      .maybeSingle();
+    if (entite?.nom) beneficiaire_label = entite.nom;
+  } else if (beneficiaire_label) {
+    entite_id = await resolveEntiteId(beneficiaire_label, beneficiaire_type);
+  }
+
+  return {
+    employe_id: null as string | null,
+    entite_id,
+    beneficiaire_type,
+    beneficiaire_label,
+  };
+}
 
 export async function createMateriel(input: {
   code_materiel: string;
@@ -26,6 +68,7 @@ export async function createMateriel(input: {
   salle?: string | null;
   photo_url?: string | null;
   employe_id?: string | null;
+  entite_id?: string | null;
   beneficiaire_type?: "employe" | "departement" | "societe" | null;
   beneficiaire_label?: string | null;
   date_attribution?: string | null;
@@ -41,8 +84,8 @@ export async function createMateriel(input: {
     if (bt === "employe" && !input.employe_id) {
       throw new Error("Veuillez sélectionner un employé.");
     }
-    if (bt !== "employe" && !input.beneficiaire_label) {
-      throw new Error("Veuillez renseigner le bénéficiaire (département/société).");
+    if (bt !== "employe" && !input.entite_id && !input.beneficiaire_label) {
+      throw new Error("Veuillez sélectionner ou renseigner le bénéficiaire (département/société).");
     }
   }
 
@@ -87,15 +130,18 @@ export async function createMateriel(input: {
       input.date_attribution ?? new Date().toISOString().slice(0, 10);
 
     const beneficiaire_type = input.beneficiaire_type ?? "employe";
+    const beneficiaire = await resolveAttributionBeneficiaire(supabase, {
+      beneficiaire_type,
+      employe_id: input.employe_id,
+      entite_id: input.entite_id,
+      beneficiaire_label: input.beneficiaire_label,
+    });
 
     const { error: attributionError } = await supabase.from("attributions").insert({
       materiel_id: materiel.id,
-      employe_id: beneficiaire_type === "employe" ? input.employe_id! : null,
+      ...beneficiaire,
       date_attribution,
       statut: "Actif",
-      beneficiaire_type,
-      beneficiaire_label:
-        beneficiaire_type === "employe" ? "Employé" : (input.beneficiaire_label ?? null),
     });
 
     if (attributionError) {
@@ -128,6 +174,7 @@ export async function updateMateriel(input: {
   salle?: string | null;
   photo_url?: string | null;
   employe_id?: string | null;
+  entite_id?: string | null;
   beneficiaire_type?: "employe" | "departement" | "societe" | null;
   beneficiaire_label?: string | null;
   date_attribution?: string | null;
@@ -141,8 +188,8 @@ export async function updateMateriel(input: {
     if (bt === "employe" && !input.employe_id) {
       throw new Error("Veuillez sélectionner un employé.");
     }
-    if (bt !== "employe" && !input.beneficiaire_label) {
-      throw new Error("Veuillez renseigner le bénéficiaire (département/société).");
+    if (bt !== "employe" && !input.entite_id && !input.beneficiaire_label) {
+      throw new Error("Veuillez sélectionner ou renseigner le bénéficiaire (département/société).");
     }
   }
 
@@ -200,13 +247,16 @@ export async function updateMateriel(input: {
   } else {
     const date_attribution = input.date_attribution ?? new Date().toISOString().slice(0, 10);
     const beneficiaire_type = input.beneficiaire_type ?? "employe";
+    const beneficiaire = await resolveAttributionBeneficiaire(supabase, {
+      beneficiaire_type,
+      employe_id: input.employe_id,
+      entite_id: input.entite_id,
+      beneficiaire_label: input.beneficiaire_label,
+    });
 
     const attributionPayload = {
-      employe_id: beneficiaire_type === "employe" ? input.employe_id! : null,
+      ...beneficiaire,
       date_attribution,
-      beneficiaire_type,
-      beneficiaire_label:
-        beneficiaire_type === "employe" ? "Employé" : (input.beneficiaire_label ?? null),
     };
 
     if (activeAttribution) {

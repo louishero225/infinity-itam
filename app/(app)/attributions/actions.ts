@@ -2,12 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 
+import { resolveEntiteId } from "@/app/(app)/entites/actions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { BeneficiaireType } from "@/lib/utils/beneficiaire";
 
 export async function createAttribution(input: {
   materiel_id: string;
   employe_id?: string | null;
-  beneficiaire_type: "employe" | "departement" | "societe";
+  entite_id?: string | null;
+  beneficiaire_type: BeneficiaireType;
   beneficiaire_label?: string | null;
   date_attribution: string;
   commentaire?: string | null;
@@ -20,8 +23,29 @@ export async function createAttribution(input: {
     throw new Error("Veuillez sélectionner un employé.");
   }
 
-  if (beneficiaire_type !== "employe" && !input.beneficiaire_label) {
-    throw new Error("Veuillez renseigner le bénéficiaire (département/société).");
+  if (beneficiaire_type !== "employe" && !input.entite_id && !input.beneficiaire_label) {
+    throw new Error("Veuillez sélectionner ou renseigner le bénéficiaire (département/société).");
+  }
+
+  let entite_id: string | null = input.entite_id ?? null;
+  let beneficiaire_label = input.beneficiaire_label ?? null;
+
+  if (beneficiaire_type !== "employe") {
+    if (entite_id) {
+      const { data: entite } = await supabase
+        .from("entites")
+        .select("nom, type")
+        .eq("id", entite_id)
+        .maybeSingle();
+      if (entite) {
+        beneficiaire_label = entite.nom;
+        if (entite.type === "societe" || entite.type === "departement" || entite.type === "site") {
+          // keep beneficiaire_type from form
+        }
+      }
+    } else if (beneficiaire_label) {
+      entite_id = await resolveEntiteId(beneficiaire_label, beneficiaire_type);
+    }
   }
 
   // Générer le numéro d'attribution
@@ -34,14 +58,13 @@ export async function createAttribution(input: {
   const { data: attribution, error: insertError } = await supabase.from("attributions").insert({
     materiel_id: input.materiel_id,
     employe_id: beneficiaire_type === "employe" ? input.employe_id! : null,
+    entite_id: beneficiaire_type === "employe" ? null : entite_id,
     date_attribution: input.date_attribution,
     statut: "Actif",
     numero_attribution: numeroData || undefined,
     beneficiaire_type,
     beneficiaire_label:
-      beneficiaire_type === "employe"
-        ? "Employé"
-        : (input.beneficiaire_label ?? null),
+      beneficiaire_type === "employe" ? "Employé" : beneficiaire_label,
     commentaire: input.commentaire ?? null,
   }).select("id").single();
 
@@ -61,6 +84,7 @@ export async function createAttribution(input: {
   revalidatePath("/attributions");
   revalidatePath("/materiels");
   revalidatePath("/dashboard");
+  revalidatePath("/destinataires");
   
   return { attribution_id: attribution?.id };
 }

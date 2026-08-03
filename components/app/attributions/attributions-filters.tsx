@@ -10,6 +10,11 @@ type AttributionsFiltersProps = {
   types: string[];
 };
 
+const DESTINATAIRE_OPTIONS = [
+  { value: "employe", label: "👤 Par employé" },
+  { value: "entite", label: "🏢 Par entité" },
+] as const;
+
 export function AttributionsFilters({ departements, types }: AttributionsFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -17,17 +22,18 @@ export function AttributionsFilters({ departements, types }: AttributionsFilters
 
   const activeDept = searchParams.get("departement");
   const activeType = searchParams.get("type");
+  const activeDestinataire = searchParams.get("destinataire");
 
-  const handleFilter = (key: "departement" | "type", value: string) => {
+  const handleFilter = (key: "departement" | "type" | "destinataire", value: string) => {
     const params = new URLSearchParams(searchParams.toString());
     const current = params.get(key);
-    
+
     if (current === value) {
       params.delete(key);
     } else {
       params.set(key, value);
     }
-    
+
     router.replace(params.toString() ? `${pathname}?${params.toString()}` : pathname);
   };
 
@@ -35,14 +41,31 @@ export function AttributionsFilters({ departements, types }: AttributionsFilters
     router.replace(pathname);
   };
 
-  const hasFilters = activeDept || activeType;
+  const hasFilters = activeDept || activeType || activeDestinataire;
 
   return (
     <div className="space-y-3">
-      {/* Filtres département */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-muted-foreground">Destinataire:</span>
+        {DESTINATAIRE_OPTIONS.map((opt) => {
+          const isActive = activeDestinataire === opt.value;
+          return (
+            <Badge
+              key={opt.value}
+              variant={isActive ? "default" : "secondary"}
+              className="cursor-pointer"
+              onClick={() => handleFilter("destinataire", opt.value)}
+            >
+              {opt.label}
+              {isActive && <X className="ml-1 h-3 w-3" />}
+            </Badge>
+          );
+        })}
+      </div>
+
       {departements.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-muted-foreground">Département:</span>
+          <span className="text-sm text-muted-foreground">Département employé:</span>
           {departements.map((dept) => {
             const isActive = activeDept === dept;
             return (
@@ -60,7 +83,6 @@ export function AttributionsFilters({ departements, types }: AttributionsFilters
         </div>
       )}
 
-      {/* Filtres type matériel */}
       {types.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-muted-foreground">Type matériel:</span>
@@ -81,7 +103,6 @@ export function AttributionsFilters({ departements, types }: AttributionsFilters
         </div>
       )}
 
-      {/* Bouton réinitialiser */}
       {hasFilters && (
         <div className="flex justify-end">
           <Button variant="ghost" size="sm" onClick={handleClearAll}>

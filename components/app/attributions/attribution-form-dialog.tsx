@@ -36,6 +36,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
+import { EntiteSelect } from "@/components/app/beneficiaire/entite-select";
+import type { EntiteRow } from "@/app/(app)/entites/actions";
 
 type MaterielOption = { id: string; code_materiel: string; type: string; marque: string | null; modele: string | null };
 type EmployeOption = { id: string; prenom: string; nom: string; departement: string };
@@ -62,6 +64,7 @@ const schema = z
     materiel_id: z.string().min(1),
     beneficiaire_type: z.enum(["employe", "departement", "societe"]),
     employe_id: z.string().optional(),
+    entite_id: z.string().optional(),
     beneficiaire_label: z.string().optional(),
     date_attribution: z.string().min(1),
     commentaire: z.string().optional(),
@@ -75,11 +78,11 @@ const schema = z
       });
     }
 
-    if (values.beneficiaire_type !== "employe" && !values.beneficiaire_label) {
+    if (values.beneficiaire_type !== "employe" && !values.entite_id && !values.beneficiaire_label) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["beneficiaire_label"],
-        message: "Veuillez renseigner le bénéficiaire.",
+        path: ["entite_id"],
+        message: "Veuillez sélectionner une entité.",
       });
     }
   });
@@ -89,9 +92,11 @@ type Values = z.infer<typeof schema>;
 export function AttributionFormDialog({
   materiels,
   employes,
+  entites,
 }: {
   materiels: MaterielOption[];
   employes: EmployeOption[];
+  entites: EntiteRow[];
 }) {
   const [open, setOpen] = React.useState(false);
   const [showFiche, setShowFiche] = React.useState(false);
@@ -136,6 +141,7 @@ export function AttributionFormDialog({
         materiel_id: values.materiel_id,
         beneficiaire_type: values.beneficiaire_type,
         employe_id: values.beneficiaire_type === "employe" ? values.employe_id || null : null,
+        entite_id: values.beneficiaire_type !== "employe" ? values.entite_id || null : null,
         beneficiaire_label:
           values.beneficiaire_type !== "employe" ? values.beneficiaire_label || null : null,
         date_attribution: values.date_attribution,
@@ -216,9 +222,9 @@ export function AttributionFormDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="employe">Employé</SelectItem>
-                      <SelectItem value="departement">Département</SelectItem>
-                      <SelectItem value="societe">Société</SelectItem>
+                      <SelectItem value="employe">👤 Personne (employé)</SelectItem>
+                      <SelectItem value="departement">🏢 Département / entité</SelectItem>
+                      <SelectItem value="societe">🏛️ Société</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -250,14 +256,27 @@ export function AttributionFormDialog({
             ) : (
               <FormField
                 control={form.control}
-                name="beneficiaire_label"
+                name="entite_id"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {beneficiaireType === "societe" ? "Société" : "Département"}
+                      {beneficiaireType === "societe" ? "Société" : "Département / entité"}
                     </FormLabel>
                     <FormControl>
-                      <Input placeholder={beneficiaireType === "societe" ? "Nom société" : "Ex: IT"} {...field} />
+                      <EntiteSelect
+                        entites={entites}
+                        type={beneficiaireType === "societe" ? "societe" : "departement"}
+                        value={field.value}
+                        onValueChange={(id, entite) => {
+                          field.onChange(id);
+                          form.setValue("beneficiaire_label", entite.nom);
+                        }}
+                        placeholder={
+                          beneficiaireType === "societe"
+                            ? "Choisir une société"
+                            : "Choisir un département"
+                        }
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

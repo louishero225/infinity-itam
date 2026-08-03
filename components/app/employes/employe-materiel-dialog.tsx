@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
   Dialog,
@@ -21,6 +21,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Laptop, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSortableRows } from "@/components/app/sortable-table-head";
 
 type Attribution = {
   id: string;
@@ -90,6 +91,22 @@ export function EmployeMaterielDialog({
     setLoading(false);
   };
 
+  const sortAccessors = useMemo(
+    () => ({
+      code: (a: Attribution) => a.materiel?.code_materiel,
+      type: (a: Attribution) => a.materiel?.type,
+      modele: (a: Attribution) =>
+        a.materiel ? `${a.materiel.marque ?? ""} ${a.materiel.modele ?? ""}`.trim() : "",
+      serie: (a: Attribution) => a.materiel?.numero_serie,
+      date: (a: Attribution) => a.date_attribution,
+      cout: (a: Attribution) => a.materiel?.cout,
+      statut: (a: Attribution) => a.materiel?.statut,
+    }),
+    []
+  );
+
+  const { sortedData, renderHead } = useSortableRows(attributions, sortAccessors);
+
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString("fr-FR");
   };
@@ -146,17 +163,17 @@ export function EmployeMaterielDialog({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Marque/Modèle</TableHead>
-                  <TableHead>N° Série</TableHead>
-                  <TableHead>Date attribution</TableHead>
-                  <TableHead className="text-right">Coût</TableHead>
-                  <TableHead>Statut</TableHead>
+                  {renderHead("code", "Code")}
+                  {renderHead("type", "Type")}
+                  {renderHead("modele", "Marque/Modèle")}
+                  {renderHead("serie", "N° Série")}
+                  {renderHead("date", "Date attribution")}
+                  {renderHead("cout", "Coût", "text-right")}
+                  {renderHead("statut", "Statut")}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {attributions.map((attr) => {
+                {sortedData.map((attr) => {
                   const mat = attr.materiel;
                   if (!mat) return null;
 

@@ -16,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ReparationFormDialog } from "./reparation-form-dialog";
+import { useSortableRows } from "@/components/app/sortable-table-head";
 
 type ReparationRow = {
   id: string | null;
@@ -36,6 +37,20 @@ type ReparationRow = {
 
 export function ReparationsTable({ rows }: { rows: ReparationRow[] }) {
   const [deleting, setDeleting] = React.useState<string | null>(null);
+
+  const sortAccessors = React.useMemo(
+    () => ({
+      materiel: (r: ReparationRow) => r.code_materiel,
+      type: (r: ReparationRow) => r.type_intervention,
+      date: (r: ReparationRow) => r.date_debut,
+      duree: (r: ReparationRow) => r.duree_jours,
+      prestataire: (r: ReparationRow) => r.prestataire,
+      statut: (r: ReparationRow) => r.statut,
+    }),
+    []
+  );
+
+  const { sortedData, renderHead } = useSortableRows(rows, sortAccessors);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Supprimer cette réparation ?")) return;
@@ -71,17 +86,17 @@ export function ReparationsTable({ rows }: { rows: ReparationRow[] }) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Matériel</TableHead>
-            <TableHead>Type intervention</TableHead>
-            <TableHead>Date début</TableHead>
-            <TableHead>Durée</TableHead>
-            <TableHead>Prestataire</TableHead>
-            <TableHead>Statut</TableHead>
+            {renderHead("materiel", "Matériel")}
+            {renderHead("type", "Type intervention")}
+            {renderHead("date", "Date début")}
+            {renderHead("duree", "Durée")}
+            {renderHead("prestataire", "Prestataire")}
+            {renderHead("statut", "Statut")}
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((row) => (
+          {sortedData.map((row) => (
             <TableRow key={row.id}>
               <TableCell>
                 <div>
@@ -115,7 +130,7 @@ export function ReparationsTable({ rows }: { rows: ReparationRow[] }) {
               </TableCell>
             </TableRow>
           ))}
-          {rows.length === 0 && (
+          {sortedData.length === 0 && (
             <TableRow>
               <TableCell colSpan={7} className="text-center text-muted-foreground">
                 Aucune réparation

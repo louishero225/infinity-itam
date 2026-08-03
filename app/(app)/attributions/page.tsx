@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+import { getEntites } from "@/app/(app)/entites/actions";
 import { AttributionFormDialog } from "@/components/app/attributions/attribution-form-dialog";
 import { AttributionsTable } from "@/components/app/attributions/attributions-table";
 import { AttributionsStats } from "@/components/app/attributions/attributions-stats";
@@ -15,6 +16,7 @@ type AttributionRow = {
   beneficiaire_label: string | null;
   materiel: { id: string; code_materiel: string; type: string } | null;
   employe: { id: string; prenom: string; nom: string; departement: string } | null;
+  entite: { id: string; code: string; nom: string; type: "departement" | "societe" | "site" } | null;
 };
 
 type MaterielOption = {
@@ -33,7 +35,7 @@ export default async function AttributionsPage(props: {
   const searchParams = await props.searchParams;
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: attributions, error: attrError }, { data: materiels }, { data: employes }] =
+  const [{ data: attributions, error: attrError }, { data: materiels }, { data: employes }, entites] =
     await Promise.all([
       supabase
         .from("attributions")
@@ -41,7 +43,8 @@ export default async function AttributionsPage(props: {
           `id, date_attribution, statut,
            beneficiaire_type, beneficiaire_label,
            materiel:materiel_id (id, code_materiel, type),
-           employe:employe_id (id, prenom, nom, departement)`
+           employe:employe_id (id, prenom, nom, departement),
+           entite:entite_id (id, code, nom, type)`
         )
         .eq("statut", "Actif")
         .order("date_attribution", { ascending: false })
@@ -57,6 +60,7 @@ export default async function AttributionsPage(props: {
         .select("id, prenom, nom, departement")
         .order("prenom")
         .returns<EmployeOption[]>(),
+      getEntites(),
     ]);
 
   if (attrError) {
@@ -69,18 +73,27 @@ export default async function AttributionsPage(props: {
   }
 
   const allRows = attributions ?? [];
-  
+
   const departementFilter = typeof searchParams?.departement === "string" ? searchParams.departement : null;
   const typeFilter = typeof searchParams?.type === "string" ? searchParams.type : null;
+  const destinataireFilter =
+    typeof searchParams?.destinataire === "string" ? searchParams.destinataire : null;
 
-  // Filtrer les attributions
   const rows = allRows.filter((attr) => {
+    if (destinataireFilter === "employe" && attr.beneficiaire_type !== "employe") return false;
+    if (
+      destinataireFilter === "entite" &&
+      attr.beneficiaire_type !== "departement" &&
+      attr.beneficiaire_type !== "societe" &&
+      attr.beneficiaire_type !== "site"
+    ) {
+      return false;
+    }
     if (departementFilter && attr.employe?.departement !== departementFilter) return false;
     if (typeFilter && attr.materiel?.type !== typeFilter) return false;
     return true;
   });
 
-  // Calculer stats
   const stats = {
     total: rows.length,
     parEmploye: rows.filter((a) => a.beneficiaire_type === "employe").length,
@@ -88,7 +101,6 @@ export default async function AttributionsPage(props: {
     parSociete: rows.filter((a) => a.beneficiaire_type === "societe").length,
   };
 
-  // Calculer durée moyenne en jours
   const dureesMoyenne = rows
     .map((a) => {
       const dateAttr = new Date(a.date_attribution);
@@ -96,26 +108,18 @@ export default async function AttributionsPage(props: {
       return (now.getTime() - dateAttr.getTime()) / (1000 * 60 * 60 * 24);
     })
     .filter((d) => d > 0);
-  
-  const dureeeMoyenne = dureesMoyenne.length > 0
-    ? dureesMoyenne.reduce((sum, d) => sum + d, 0) / dureesMoyenne.length
-    : undefined;
 
-  // Extraire départements uniques et types uniques
+  const dureeeMoyenne =
+    dureesMoyenne.length > 0
+      ? dureesMoyenne.reduce((sum, d) => sum + d, 0) / dureesMoyenne.length
+      : undefined;
+
   const departementsUniques = Array.from(
-    new Set(
-      allRows
-        .map((a) => a.employe?.departement)
-        .filter(Boolean)
-    )
+    new Set(allRows.map((a) => a.employe?.departement).filter(Boolean))
   ).sort() as string[];
 
   const typesUniques = Array.from(
-    new Set(
-      allRows
-        .map((a) => a.materiel?.type)
-        .filter(Boolean)
-    )
+    new Set(allRows.map((a) => a.materiel?.type).filter(Boolean))
   ).sort() as string[];
 
   return (
@@ -124,12 +128,16 @@ export default async function AttributionsPage(props: {
         <div>
           <h1 className="text-xl font-semibold">Attributions</h1>
           <p className="text-muted-foreground text-sm">
-            Attribuer et restituer le matériel.
+            Attribuer et restituer le matériel — employés ou entités.
           </p>
         </div>
 
         <div className="flex gap-2">
-          <AttributionFormDialog materiels={materiels ?? []} employes={employes ?? []} />
+          <AttributionFormDialog
+            materiels={materiels ?? []}
+            employes={employes ?? []}
+            entites={entites}
+          />
           <OnboardingDialog materiels={materiels ?? []} employes={employes ?? []} />
         </div>
       </div>
@@ -147,10 +155,7 @@ export default async function AttributionsPage(props: {
           <CardTitle className="text-sm">Filtres</CardTitle>
         </CardHeader>
         <CardContent>
-          <AttributionsFilters
-            departements={departementsUniques}
-            types={typesUniques}
-          />
+          <AttributionsFilters departements={departementsUniques} types={typesUniques} />
         </CardContent>
       </Card>
 

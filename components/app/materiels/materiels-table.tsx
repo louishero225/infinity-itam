@@ -49,6 +49,7 @@ export function MaterielsTable({ rows }: { rows: MaterielRow[] }) {
     <DataTable
       data={rows}
       hideSearch={true}
+      getRowKey={(r) => r.id}
       columns={[
         {
           key: "code",
@@ -59,6 +60,7 @@ export function MaterielsTable({ rows }: { rows: MaterielRow[] }) {
             </Link>
           ),
           searchableText: (r) => r.code_materiel,
+          sortValue: (r) => r.code_materiel,
         },
         {
           key: "type",
@@ -70,6 +72,7 @@ export function MaterielsTable({ rows }: { rows: MaterielRow[] }) {
             </div>
           ),
           searchableText: (r) => r.type,
+          sortValue: (r) => r.type,
         },
         {
           key: "marque_modele",
@@ -81,12 +84,14 @@ export function MaterielsTable({ rows }: { rows: MaterielRow[] }) {
             </span>
           ),
           searchableText: (r) => `${r.marque ?? ""} ${r.modele ?? ""}`,
+          sortValue: (r) => `${r.marque ?? ""} ${r.modele ?? ""}`.trim(),
         },
         {
           key: "serie",
           header: "N° série",
           cell: (r) => r.numero_serie ?? "—",
           searchableText: (r) => r.numero_serie ?? "",
+          sortValue: (r) => r.numero_serie,
         },
         {
           key: "statut",
@@ -113,10 +118,12 @@ export function MaterielsTable({ rows }: { rows: MaterielRow[] }) {
             );
           },
           searchableText: (r) => r.statut ?? "",
+          sortValue: (r) => r.statut ?? "Stock",
         },
         {
           key: "actions",
           header: "Actions",
+          sortable: false,
           cell: (r) => (
             <div className="flex gap-2">
               <MaterielFormDialog
