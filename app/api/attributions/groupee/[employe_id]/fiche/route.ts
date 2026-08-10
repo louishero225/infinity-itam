@@ -11,8 +11,18 @@ type MaterielJoin = {
 
 type AttributionWithMateriel = {
   numero_attribution: string | null;
-  materiels: MaterielJoin | null;
+  materiel: MaterielJoin | MaterielJoin[] | null;
 };
+
+function unwrapMateriel(materiel: MaterielJoin | MaterielJoin[] | null) {
+  return Array.isArray(materiel) ? materiel[0] : materiel;
+}
+
+function parseAttributionIds(request: Request) {
+  const idsParam = new URL(request.url).searchParams.get("ids");
+  if (!idsParam) return null;
+  return idsParam.split(",").map((id) => id.trim()).filter(Boolean);
+}
 
 export async function GET(
   request: Request,
@@ -24,6 +34,7 @@ export async function GET(
 
     const supabase = auth.supabase;
     const { employe_id } = await params;
+    const attributionIds = parseAttributionIds(request);
 
     // Récupérer les informations de l'employé
     const { data: employe, error: employeError } = await supabase
@@ -36,15 +47,14 @@ export async function GET(
       return new NextResponse("Employé non trouvé", { status: 404 });
     }
 
-    // Récupérer toutes les attributions actives récentes de cet employé
-    const { data: attributions, error: attributionsError } = await supabase
+    let query = supabase
       .from("attributions")
       .select(`
         id,
         numero_attribution,
         date_attribution,
         commentaire,
-        materiels (
+        materiel:materiel_id (
           id,
           code_materiel,
           type,
@@ -55,8 +65,15 @@ export async function GET(
       `)
       .eq("employe_id", employe_id)
       .eq("statut", "Actif")
-      .order("date_attribution", { ascending: false })
-      .limit(10);
+      .order("date_attribution", { ascending: false });
+
+    if (attributionIds?.length) {
+      query = query.in("id", attributionIds);
+    } else {
+      query = query.limit(10);
+    }
+
+    const { data: attributions, error: attributionsError } = await query;
 
     if (attributionsError) {
       return new NextResponse("Erreur lors de la récupération des attributions", {
@@ -80,7 +97,7 @@ export async function GET(
     // Formater les matériels
     const materielsHTML = (attributions as unknown as AttributionWithMateriel[])
       .map((a) => {
-        const mat = a.materiels;
+        const mat = unwrapMateriel(a.materiel);
         if (!mat) return "";
         
         return `

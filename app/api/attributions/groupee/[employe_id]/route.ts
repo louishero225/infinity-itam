@@ -12,8 +12,18 @@ type AttributionWithMateriel = {
   numero_attribution: string | null;
   date_attribution: string;
   commentaire: string | null;
-  materiels: MaterielJoin | null;
+  materiel: MaterielJoin | MaterielJoin[] | null;
 };
+
+function unwrapMateriel(materiel: MaterielJoin | MaterielJoin[] | null) {
+  return Array.isArray(materiel) ? materiel[0] : materiel;
+}
+
+function parseAttributionIds(request: Request) {
+  const idsParam = new URL(request.url).searchParams.get("ids");
+  if (!idsParam) return null;
+  return idsParam.split(",").map((id) => id.trim()).filter(Boolean);
+}
 
 export async function GET(
   request: Request,
@@ -25,6 +35,7 @@ export async function GET(
 
     const supabase = auth.supabase;
     const { employe_id } = await params;
+    const attributionIds = parseAttributionIds(request);
 
     // Récupérer les informations de l'employé
     const { data: employe, error: employeError } = await supabase
@@ -40,15 +51,14 @@ export async function GET(
       );
     }
 
-    // Récupérer toutes les attributions actives de cet employé
-    const { data: attributions, error: attributionsError } = await supabase
+    let query = supabase
       .from("attributions")
       .select(`
         id,
         numero_attribution,
         date_attribution,
         commentaire,
-        materiels (
+        materiel:materiel_id (
           id,
           code_materiel,
           type,
@@ -60,6 +70,12 @@ export async function GET(
       .eq("employe_id", employe_id)
       .eq("statut", "Actif")
       .order("date_attribution", { ascending: false });
+
+    if (attributionIds?.length) {
+      query = query.in("id", attributionIds);
+    }
+
+    const { data: attributions, error: attributionsError } = await query;
 
     if (attributionsError) {
       return NextResponse.json(
@@ -73,14 +89,17 @@ export async function GET(
       ?.map((a) => a.numero_attribution)
       .filter(Boolean) || [];
 
-    const materiels = (attributions as unknown as AttributionWithMateriel[] | null)?.map((a) => ({
-      code_materiel: a.materiels?.code_materiel || "",
-      type_materiel: a.materiels?.type || "",
-      marque: a.materiels?.marque || undefined,
-      modele: a.materiels?.modele || undefined,
-      numero_serie: a.materiels?.numero_serie || undefined,
-      numero_attribution: a.numero_attribution || "",
-    })) || [];
+    const materiels = (attributions as unknown as AttributionWithMateriel[] | null)?.map((a) => {
+      const mat = unwrapMateriel(a.materiel);
+      return {
+        code_materiel: mat?.code_materiel || "",
+        type_materiel: mat?.type || "",
+        marque: mat?.marque || undefined,
+        modele: mat?.modele || undefined,
+        numero_serie: mat?.numero_serie || undefined,
+        numero_attribution: a.numero_attribution || "",
+      };
+    }) || [];
 
     const ficheData = {
       numeros_attribution,

@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { EmployeActions } from "@/components/app/employes/employe-actions";
+import { FicheOnboardingButton } from "@/components/app/attributions/fiche-onboarding-button";
 
 type EmployeRow = {
   id: string;
@@ -83,6 +84,7 @@ export default async function EmployeDetailPage({
   }
 
   const nombreMaterielsActifs = (actifs ?? []).length;
+  const attributionIdsActives = (actifs ?? []).map((a) => a.id);
 
   return (
     <div className="flex flex-col gap-6">
@@ -92,11 +94,16 @@ export default async function EmployeDetailPage({
         backHref="/destinataires?tab=personnes"
         backLabel="Retour aux destinataires"
         actions={
-          <EmployeActions
-            employeId={id}
-            employeNom={`${employe.prenom} ${employe.nom}`}
-            nombreMateriels={nombreMaterielsActifs}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            {nombreMaterielsActifs > 0 ? (
+              <FicheOnboardingButton employeId={id} attributionIds={attributionIdsActives} />
+            ) : null}
+            <EmployeActions
+              employeId={id}
+              employeNom={`${employe.prenom} ${employe.nom}`}
+              nombreMateriels={nombreMaterielsActifs}
+            />
+          </div>
         }
       />
 

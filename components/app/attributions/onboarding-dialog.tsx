@@ -8,9 +8,11 @@ import { toast } from "sonner";
 
 import { createOnboardingAttribution } from "@/app/(app)/attributions/actions";
 import { FormDialogContent } from "@/components/app/form-dialog-content";
+import { FicheRemiseGroupee } from "@/components/app/attributions/fiche-remise-groupee";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
@@ -41,13 +43,15 @@ const schema = z.object({
 type Values = z.infer<typeof schema>;
 
 type EmployeOption = { id: string; prenom: string; nom: string; departement: string };
-type MaterielOption = { 
-  id: string; 
-  code_materiel: string; 
-  type: string; 
-  marque: string | null; 
+type MaterielOption = {
+  id: string;
+  code_materiel: string;
+  type: string;
+  marque: string | null;
   modele: string | null;
 };
+
+type FicheGroupeeData = React.ComponentProps<typeof FicheRemiseGroupee>["data"];
 
 export function OnboardingDialog({
   employes,
@@ -57,6 +61,8 @@ export function OnboardingDialog({
   materiels: MaterielOption[];
 }) {
   const [open, setOpen] = React.useState(false);
+  const [showFiche, setShowFiche] = React.useState(false);
+  const [ficheData, setFicheData] = React.useState<FicheGroupeeData | null>(null);
   const [materielSearch, setMaterielSearch] = React.useState("");
 
   const form = useForm<Values>({
@@ -93,11 +99,24 @@ export function OnboardingDialog({
       });
 
       toast.success(`${result.count} attribution(s) créée(s) avec succès`);
-      
-      // Ouvrir la fiche immédiatement dans un nouvel onglet
-      window.open(`/api/attributions/groupee/${values.employe_id}/fiche`, "_blank");
-      
-      // Fermer le dialog et réinitialiser le formulaire
+
+      const idsParam = encodeURIComponent(result.attribution_ids.join(","));
+      const ficheResponse = await fetch(
+        `/api/attributions/groupee/${values.employe_id}?ids=${idsParam}`
+      );
+
+      if (ficheResponse.ok) {
+        const data = (await ficheResponse.json()) as FicheGroupeeData;
+        setFicheData(data);
+        setShowFiche(true);
+        window.open(
+          `/api/attributions/groupee/${values.employe_id}/fiche?ids=${idsParam}`,
+          "_blank"
+        );
+      } else {
+        toast.error("Attributions créées, mais la fiche d'onboarding n'a pas pu être générée.");
+      }
+
       form.reset();
       setOpen(false);
     } catch (e) {
@@ -259,6 +278,20 @@ export function OnboardingDialog({
           </Form>
         </FormDialogContent>
       </Dialog>
+
+      {showFiche && ficheData ? (
+        <Dialog open={showFiche} onOpenChange={setShowFiche}>
+          <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Fiche de remise — kit d&apos;onboarding</DialogTitle>
+              <DialogDescription>
+                Attribution groupée validée. Imprimez la fiche pour signature.
+              </DialogDescription>
+            </DialogHeader>
+            <FicheRemiseGroupee data={ficheData} />
+          </DialogContent>
+        </Dialog>
+      ) : null}
     </>
   );
 }
