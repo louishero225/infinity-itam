@@ -1,8 +1,8 @@
-import Link from "next/link";
-
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/types/database";
 
+import { PageHeader } from "@/components/app/page-header";
+import { StatCard } from "@/components/app/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DepartmentStats } from "@/components/app/dashboard/department-stats";
 import { CategoryStats } from "@/components/app/dashboard/category-stats";
@@ -204,67 +204,33 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Dashboard ITAM</h1>
-          <p className="text-muted-foreground text-sm">Vue d'ensemble et analytics du parc informatique</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Tableau de bord ITAM"
+        description="Vue d'ensemble et analytics du parc informatique"
+      />
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-4">
-        <Link href="/materiels" className="transition-transform hover:scale-[1.02]">
-          <Card className="cursor-pointer hover:border-primary hover:shadow-md">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs text-muted-foreground">Total matériel</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{kpiTotal ?? "—"}</div>
-            </CardContent>
-          </Card>
-        </Link>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground">En stock</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-600">{kpiStock ?? "—"}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground">Attribués</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-600">{kpiAttribues ?? "—"}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground">Valeur totale</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold text-purple-600">{formatMoney(kpiValeur)}</div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Total matériel" value={kpiTotal ?? "—"} href="/materiels" />
+        <StatCard label="En stock" value={kpiStock ?? "—"} accent="success" />
+        <StatCard label="Attribués" value={kpiAttribues ?? "—"} />
+        <StatCard label="Valeur totale" value={formatMoney(kpiValeur)} accent="muted" />
       </div>
-
       {/* Graphiques principaux - 2 colonnes */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <AcquisitionsChart data={acquisitionsChartData} />
         <CoutsChart data={coutsChartData} />
       </div>
 
       {/* Graphiques secondaires - 3 colonnes */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <CategoriesChart data={categoriesChartData} />
         <StatutsChart data={statutsChartData} />
         <DernieresAcquisitions rows={acquisitionsFormatees} />
       </div>
 
       {/* Stats détaillées - 2 colonnes */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Équipements par catégorie</CardTitle>

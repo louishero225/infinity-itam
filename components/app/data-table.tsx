@@ -3,6 +3,7 @@
 import * as React from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 
+import { EmptyState } from "@/components/app/empty-state";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -150,8 +151,16 @@ export function DataTable<T>({
           ))}
           {sorted.length === 0 && (
             <TableRow>
-              <TableCell colSpan={columns.length} className="text-muted-foreground">
-                Aucun résultat.
+              <TableCell colSpan={columns.length} className="p-0">
+                <EmptyState
+                  title="Aucun résultat"
+                  description={
+                    query.trim()
+                      ? "Aucun élément ne correspond à votre recherche."
+                      : "Aucune donnée à afficher pour le moment."
+                  }
+                  className="border-0 bg-transparent my-4"
+                />
               </TableCell>
             </TableRow>
           )}

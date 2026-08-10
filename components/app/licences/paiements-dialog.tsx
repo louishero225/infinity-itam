@@ -11,14 +11,12 @@ import {
   createPaiement,
   marquerPaiementEffectue,
   getPaiementsLicence,
-  deletePaiement,
 } from "@/app/(app)/licences/paiements-actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -90,13 +88,7 @@ export function PaiementsDialog({
     resolver: zodResolver(validationSchema),
   });
 
-  React.useEffect(() => {
-    if (open) {
-      loadPaiements();
-    }
-  }, [open]);
-
-  async function loadPaiements() {
+  const loadPaiements = React.useCallback(async () => {
     try {
       setLoading(true);
       const data = await getPaiementsLicence(licenceId);
@@ -106,7 +98,13 @@ export function PaiementsDialog({
     } finally {
       setLoading(false);
     }
-  }
+  }, [licenceId]);
+
+  React.useEffect(() => {
+    if (open) {
+      void loadPaiements();
+    }
+  }, [open, loadPaiements]);
 
   async function onSubmitPaiement(values: z.infer<typeof paiementSchema>) {
     try {

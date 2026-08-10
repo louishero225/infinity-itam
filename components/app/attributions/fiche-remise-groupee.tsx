@@ -3,7 +3,6 @@
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
-import { getMaterielIcon } from "@/lib/utils/materiel-icons";
 
 type MaterielItem = {
   code_materiel: string;
@@ -117,7 +116,11 @@ export function FicheRemiseGroupee({ data }: { data: FicheGroupeeData }) {
                   gap: 8px;
                 }
                 .section-icon {
-                  font-size: 14px;
+                  width: 6px;
+                  height: 6px;
+                  border-radius: 1px;
+                  background: currentColor;
+                  flex-shrink: 0;
                 }
                 .info-grid {
                   display: grid;
@@ -292,17 +295,17 @@ export function FicheRemiseGroupee({ data }: { data: FicheGroupeeData }) {
             <p>Service Informatique</p>
           </div>
           <div className="numero-section">
-            <div className="numero-label">Numéros d'attribution</div>
+            <div className="numero-label">Numéros d&apos;attribution</div>
             <div className="numero-value">{data.numeros_attribution.join(", ")}</div>
           </div>
         </div>
 
         <div className="document-title">Fiche de Remise de Matériel</div>
-        <div className="document-subtitle">Kit d'Onboarding - Attribution Multiple</div>
+        <div className="document-subtitle">Kit d&apos;Onboarding - Attribution Multiple</div>
 
         <div className="section">
           <div className="section-header">
-            <span className="section-icon">👤</span>
+            <span className="section-icon" aria-hidden="true" />
             <span>BÉNÉFICIAIRE</span>
           </div>
           <div className="info-grid">
@@ -317,7 +320,7 @@ export function FicheRemiseGroupee({ data }: { data: FicheGroupeeData }) {
               <div className="info-value">{data.beneficiaire_departement || "—"}</div>
             </div>
             <div className="info-item">
-              <div className="info-label">Date d'attribution</div>
+              <div className="info-label">Date d&apos;attribution</div>
               <div className="info-value">{new Date(data.date_attribution).toLocaleDateString("fr-FR")}</div>
             </div>
             <div className="info-item">
@@ -329,7 +332,7 @@ export function FicheRemiseGroupee({ data }: { data: FicheGroupeeData }) {
 
         <div className="section">
           <div className="section-header">
-            <span className="section-icon">📦</span>
+            <span className="section-icon" aria-hidden="true" />
             <span>MATÉRIELS REMIS</span>
           </div>
           <div className="materiel-list">
@@ -354,7 +357,7 @@ export function FicheRemiseGroupee({ data }: { data: FicheGroupeeData }) {
         {data.commentaire && (
           <div className="section">
             <div className="section-header">
-              <span className="section-icon">📝</span>
+              <span className="section-icon" aria-hidden="true" />
               <span>OBSERVATIONS</span>
             </div>
             <div className="info-grid">
@@ -367,13 +370,13 @@ export function FicheRemiseGroupee({ data }: { data: FicheGroupeeData }) {
 
         <div className="section">
           <div className="section-header">
-            <span className="section-icon">⚠️</span>
-            <span>CONDITIONS D'UTILISATION</span>
+            <span className="section-icon" aria-hidden="true" />
+            <span>CONDITIONS D&apos;UTILISATION</span>
           </div>
           <div className="conditions">
-            <div className="conditions-title">Le bénéficiaire s'engage à :</div>
+            <div className="conditions-title">Le bénéficiaire s&apos;engage à :</div>
             <ul className="conditions-list">
-              <li>Utiliser le matériel conformément aux règles de sécurité informatique de l'entreprise</li>
+              <li>Utiliser le matériel conformément aux règles de sécurité informatique de l&apos;entreprise</li>
               <li>Préserver le matériel et en assurer un usage professionnel responsable</li>
               <li>Signaler immédiatement toute panne, dysfonctionnement ou perte au service IT</li>
               <li>Restituer le matériel en bon état en cas de départ ou de changement de fonction</li>

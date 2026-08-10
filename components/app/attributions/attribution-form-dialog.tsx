@@ -101,7 +101,6 @@ export function AttributionFormDialog({
   const [open, setOpen] = React.useState(false);
   const [showFiche, setShowFiche] = React.useState(false);
   const [ficheData, setFicheData] = React.useState<FicheData | null>(null);
-  const [attributionId, setAttributionId] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const form = useForm<Values>({
@@ -152,8 +151,6 @@ export function AttributionFormDialog({
       
       // Récupérer l'ID de l'attribution créée depuis le résultat
       if (result?.attribution_id) {
-        setAttributionId(result.attribution_id);
-        
         // Charger les données pour la fiche
         const response = await fetch(`/api/attributions/${result.attribution_id}/fiche`);
         if (response.ok) {
@@ -183,7 +180,7 @@ export function AttributionFormDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Attribuer un matériel</DialogTitle>
-          <DialogDescription>Sélectionne un matériel en stock et un bénéficiaire.</DialogDescription>
+          <DialogDescription>Sélectionnez un matériel en stock et un bénéficiaire.</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -222,9 +219,9 @@ export function AttributionFormDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="employe">👤 Personne (employé)</SelectItem>
-                      <SelectItem value="departement">🏢 Département / entité</SelectItem>
-                      <SelectItem value="societe">🏛️ Société</SelectItem>
+                      <SelectItem value="employe">Personne (employé)</SelectItem>
+                      <SelectItem value="departement">Département / entité</SelectItem>
+                      <SelectItem value="societe">Société</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -289,7 +286,7 @@ export function AttributionFormDialog({
               name="date_attribution"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Date d'attribution</FormLabel>
+                  <FormLabel>Date d&apos;attribution</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} />
                   </FormControl>

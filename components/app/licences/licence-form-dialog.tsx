@@ -8,11 +8,11 @@ import { toast } from "sonner";
 
 import { createLicence, updateLicence } from "@/app/(app)/licences/actions";
 import { getEmployes } from "@/app/(app)/employes/actions";
+import { FormDialogContent } from "@/components/app/form-dialog-content";
 import { Button } from "@/components/ui/button";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
@@ -60,6 +60,8 @@ const schema = z.object({
 });
 
 type Values = z.infer<typeof schema>;
+
+export type LicenceFormValues = Values;
 
 export function LicenceFormDialog({
   mode = "create",
@@ -110,7 +112,7 @@ export function LicenceFormDialog({
     form.reset({
       nom: initialValues.nom ?? "",
       editeur: initialValues.editeur ?? "",
-      type_licence: initialValues.type_licence as any,
+      type_licence: initialValues.type_licence,
       gestionnaire_id: initialValues.gestionnaire_id ?? "",
       numero_licence: initialValues.numero_licence ?? "",
       cle_produit: initialValues.cle_produit ?? "",
@@ -122,7 +124,7 @@ export function LicenceFormDialog({
       contact_support: initialValues.contact_support ?? "",
       url_telechargement: initialValues.url_telechargement ?? "",
       notes: initialValues.notes ?? "",
-      statut: (initialValues.statut as any) ?? "Active",
+      statut: initialValues.statut ?? "Active",
       is_active: initialValues.is_active ?? true,
     });
   }, [open, mode, initialValues, form]);
@@ -186,7 +188,7 @@ export function LicenceFormDialog({
           {mode === "edit" ? "Modifier" : "Ajouter"}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <FormDialogContent size="lg">
         <DialogHeader>
           <DialogTitle>{mode === "edit" ? "Modifier licence" : "Nouvelle licence"}</DialogTitle>
           <DialogDescription>
@@ -456,7 +458,7 @@ export function LicenceFormDialog({
             </DialogFooter>
           </form>
         </Form>
-      </DialogContent>
+      </FormDialogContent>
     </Dialog>
   );
 }

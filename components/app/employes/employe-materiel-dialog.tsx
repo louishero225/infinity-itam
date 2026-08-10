@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
   Dialog,
@@ -14,7 +14,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
@@ -53,13 +52,7 @@ export function EmployeMaterielDialog({
   const [loading, setLoading] = useState(false);
   const [attributions, setAttributions] = useState<Attribution[]>([]);
 
-  useEffect(() => {
-    if (open && attributions.length === 0) {
-      loadAttributions();
-    }
-  }, [open]);
-
-  const loadAttributions = async () => {
+  const loadAttributions = useCallback(async () => {
     setLoading(true);
     const supabase = createSupabaseBrowserClient();
 
@@ -89,7 +82,7 @@ export function EmployeMaterielDialog({
       setAttributions(data as unknown as Attribution[]);
     }
     setLoading(false);
-  };
+  }, [employeId]);
 
   const sortAccessors = useMemo(
     () => ({
@@ -124,8 +117,15 @@ export function EmployeMaterielDialog({
     return null;
   }
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (nextOpen && attributions.length === 0) {
+      void loadAttributions();
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button
           variant="ghost"

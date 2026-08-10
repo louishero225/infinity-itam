@@ -15,7 +15,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ReparationFormDialog } from "./reparation-form-dialog";
+import { AlertDialogConfirm } from "@/components/ui/alert-dialog-confirm";
+import { ReparationFormDialog, type ReparationFormValues } from "./reparation-form-dialog";
 import { useSortableRows } from "@/components/app/sortable-table-head";
 
 type ReparationRow = {
@@ -37,6 +38,7 @@ type ReparationRow = {
 
 export function ReparationsTable({ rows }: { rows: ReparationRow[] }) {
   const [deleting, setDeleting] = React.useState<string | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = React.useState<string | null>(null);
 
   const sortAccessors = React.useMemo(
     () => ({
@@ -53,8 +55,6 @@ export function ReparationsTable({ rows }: { rows: ReparationRow[] }) {
   const { sortedData, renderHead } = useSortableRows(rows, sortAccessors);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Supprimer cette réparation ?")) return;
-
     try {
       setDeleting(id);
       await deleteReparation(id);
@@ -63,6 +63,7 @@ export function ReparationsTable({ rows }: { rows: ReparationRow[] }) {
       toast.error(e instanceof Error ? e.message : "Erreur");
     } finally {
       setDeleting(null);
+      setDeleteTargetId(null);
     }
   };
 
@@ -117,11 +118,29 @@ export function ReparationsTable({ rows }: { rows: ReparationRow[] }) {
               <TableCell>{getStatutBadge(row.statut)}</TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
-                  <ReparationFormDialog mode="edit" initialValues={row as any} />
+                  <ReparationFormDialog
+                    mode="edit"
+                    initialValues={
+                      row.id
+                        ? ({
+                            id: row.id,
+                            materiel_id: "",
+                            date_debut: row.date_debut ?? "",
+                            date_fin: row.date_fin ?? undefined,
+                            type_intervention: row.type_intervention ?? "Réparation",
+                            description: row.description ?? "",
+                            cout: row.cout != null ? String(row.cout) : undefined,
+                            prestataire: row.prestataire ?? undefined,
+                            statut: row.statut ?? undefined,
+                            priorite: row.priorite ?? undefined,
+                          } as ReparationFormValues & { id: string })
+                        : undefined
+                    }
+                  />
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => row.id && handleDelete(row.id)}
+                    onClick={() => row.id && setDeleteTargetId(row.id)}
                     disabled={deleting === row.id}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -139,6 +158,17 @@ export function ReparationsTable({ rows }: { rows: ReparationRow[] }) {
           )}
         </TableBody>
       </Table>
+      <AlertDialogConfirm
+        open={!!deleteTargetId}
+        onOpenChange={(open) => !open && setDeleteTargetId(null)}
+        onConfirm={async () => {
+          if (deleteTargetId) await handleDelete(deleteTargetId);
+        }}
+        title="Supprimer cette réparation ?"
+        description="Cette action est irréversible."
+        confirmText="Supprimer"
+        variant="destructive"
+      />
     </div>
   );
 }

@@ -16,7 +16,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { LicenceFormDialog } from "./licence-form-dialog";
+import { AlertDialogConfirm } from "@/components/ui/alert-dialog-confirm";
+import { LicenceFormDialog, type LicenceFormValues } from "./licence-form-dialog";
 import { useSortableRows } from "@/components/app/sortable-table-head";
 
 const PaiementsDialog = dynamic(
@@ -54,6 +55,9 @@ type LicenceRow = {
 
 export function LicencesTable({ rows }: { rows: LicenceRow[] }) {
   const [deleting, setDeleting] = React.useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = React.useState<{ id: string; nom: string } | null>(
+    null
+  );
 
   const sortAccessors = React.useMemo(
     () => ({
@@ -70,9 +74,7 @@ export function LicencesTable({ rows }: { rows: LicenceRow[] }) {
 
   const { sortedData, renderHead } = useSortableRows(rows, sortAccessors);
 
-  const handleDelete = async (id: string, nom: string) => {
-    if (!confirm(`Supprimer la licence "${nom}" ?`)) return;
-
+  const handleDelete = async (id: string) => {
     try {
       setDeleting(id);
       await deleteLicence(id);
@@ -81,6 +83,7 @@ export function LicencesTable({ rows }: { rows: LicenceRow[] }) {
       toast.error(e instanceof Error ? e.message : "Erreur");
     } finally {
       setDeleting(null);
+      setDeleteTarget(null);
     }
   };
 
@@ -141,7 +144,7 @@ export function LicencesTable({ rows }: { rows: LicenceRow[] }) {
                       id: row.id,
                       nom: row.nom,
                       editeur: row.editeur || undefined,
-                      type_licence: row.type_licence as any,
+                      type_licence: row.type_licence as LicenceFormValues["type_licence"],
                       gestionnaire_id: row.gestionnaire_id || undefined,
                       numero_licence: row.numero_licence || undefined,
                       cle_produit: row.cle_produit || undefined,
@@ -153,14 +156,14 @@ export function LicencesTable({ rows }: { rows: LicenceRow[] }) {
                       contact_support: row.contact_support || undefined,
                       url_telechargement: row.url_telechargement || undefined,
                       notes: row.notes || undefined,
-                      statut: row.statut as any,
+                      statut: row.statut as LicenceFormValues["statut"],
                       is_active: row.is_active ?? true,
                     }}
                   />
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => handleDelete(row.id, row.nom)}
+                    onClick={() => setDeleteTarget({ id: row.id, nom: row.nom })}
                     disabled={deleting === row.id}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -178,6 +181,21 @@ export function LicencesTable({ rows }: { rows: LicenceRow[] }) {
           )}
         </TableBody>
       </Table>
+      <AlertDialogConfirm
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        onConfirm={async () => {
+          if (deleteTarget) await handleDelete(deleteTarget.id);
+        }}
+        title="Supprimer cette licence ?"
+        description={
+          deleteTarget
+            ? `La licence « ${deleteTarget.nom} » sera définitivement supprimée.`
+            : ""
+        }
+        confirmText="Supprimer"
+        variant="destructive"
+      />
     </div>
   );
 }

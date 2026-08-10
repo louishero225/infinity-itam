@@ -20,17 +20,23 @@ type Props = {
   className?: string;
 };
 
-function iconForType(type: BeneficiaireInfo["type"]) {
+function BeneficiaireTypeIcon({
+  type,
+  className,
+}: {
+  type: BeneficiaireInfo["type"];
+  className?: string;
+}) {
   switch (type) {
     case "employe":
-      return User;
+      return <User className={className} />;
     case "site":
-      return MapPin;
+      return <MapPin className={className} />;
     case "societe":
     case "departement":
-      return Building2;
+      return <Building2 className={className} />;
     default:
-      return Users;
+      return <Users className={className} />;
   }
 }
 
@@ -62,13 +68,12 @@ export function BeneficiaireBadge({
     employe,
     entite,
   });
-  const Icon = iconForType(info.type);
 
   return (
     <div className={className}>
       <div className="flex items-center gap-2">
         <Badge variant="outline" className={badgeClass(info.type)}>
-          <Icon className="size-3 mr-1" />
+          <BeneficiaireTypeIcon type={info.type} className="size-3 mr-1" />
           {BENEFICIAIRE_TYPE_LABELS[info.type as BeneficiaireType] ?? "Destinataire"}
         </Badge>
         <div>

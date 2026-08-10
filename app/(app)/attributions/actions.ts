@@ -1,204 +1,248 @@
 "use server";
 
+
+
 import { revalidatePath } from "next/cache";
 
-import { resolveEntiteId } from "@/app/(app)/entites/actions";
+
+
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+import { resolveAttributionBeneficiaire } from "@/lib/server/resolve-attribution-beneficiaire";
+
+import {
+
+  assertMaterielAvailableForAttribution,
+
+  createAttributionWithFallback,
+
+} from "@/lib/server/create-attribution-transaction";
+
+import { restituerAttributionWithFallback } from "@/lib/server/restitution-transaction";
+
 import type { BeneficiaireType } from "@/lib/utils/beneficiaire";
 
+
+
 export async function createAttribution(input: {
+
   materiel_id: string;
+
   employe_id?: string | null;
+
   entite_id?: string | null;
+
   beneficiaire_type: BeneficiaireType;
+
   beneficiaire_label?: string | null;
+
   date_attribution: string;
+
   commentaire?: string | null;
+
 }) {
+
   const supabase = await createSupabaseServerClient();
 
-  const beneficiaire_type = input.beneficiaire_type ?? "employe";
 
-  if (beneficiaire_type === "employe" && !input.employe_id) {
-    throw new Error("Veuillez sélectionner un employé.");
-  }
 
-  if (beneficiaire_type !== "employe" && !input.entite_id && !input.beneficiaire_label) {
-    throw new Error("Veuillez sélectionner ou renseigner le bénéficiaire (département/société).");
-  }
+  await assertMaterielAvailableForAttribution(supabase, input.materiel_id);
 
-  let entite_id: string | null = input.entite_id ?? null;
-  let beneficiaire_label = input.beneficiaire_label ?? null;
 
-  if (beneficiaire_type !== "employe") {
-    if (entite_id) {
-      const { data: entite } = await supabase
-        .from("entites")
-        .select("nom, type")
-        .eq("id", entite_id)
-        .maybeSingle();
-      if (entite) {
-        beneficiaire_label = entite.nom;
-        if (entite.type === "societe" || entite.type === "departement" || entite.type === "site") {
-          // keep beneficiaire_type from form
-        }
-      }
-    } else if (beneficiaire_label) {
-      entite_id = await resolveEntiteId(beneficiaire_label, beneficiaire_type);
-    }
-  }
 
-  // Générer le numéro d'attribution
-  const { data: numeroData, error: numeroError } = await supabase.rpc("generate_numero_attribution");
-  
-  if (numeroError) {
-    console.error("Erreur génération numéro:", numeroError);
-  }
+  const beneficiaire = await resolveAttributionBeneficiaire(supabase, {
 
-  const { data: attribution, error: insertError } = await supabase.from("attributions").insert({
+    beneficiaire_type: input.beneficiaire_type ?? "employe",
+
+    employe_id: input.employe_id,
+
+    entite_id: input.entite_id,
+
+    beneficiaire_label: input.beneficiaire_label,
+
+  });
+
+
+
+  const attributionId = await createAttributionWithFallback(supabase, {
+
     materiel_id: input.materiel_id,
-    employe_id: beneficiaire_type === "employe" ? input.employe_id! : null,
-    entite_id: beneficiaire_type === "employe" ? null : entite_id,
+
+    employe_id: beneficiaire.employe_id,
+
+    entite_id: beneficiaire.entite_id,
+
+    beneficiaire_type: beneficiaire.beneficiaire_type,
+
+    beneficiaire_label: beneficiaire.beneficiaire_label,
+
     date_attribution: input.date_attribution,
-    statut: "Actif",
-    numero_attribution: numeroData || undefined,
-    beneficiaire_type,
-    beneficiaire_label:
-      beneficiaire_type === "employe" ? "Employé" : beneficiaire_label,
+
     commentaire: input.commentaire ?? null,
-  }).select("id").single();
 
-  if (insertError) {
-    throw new Error(insertError.message);
-  }
+  });
 
-  const { error: updateError } = await supabase
-    .from("materiels")
-    .update({ statut: "Attribué" })
-    .eq("id", input.materiel_id);
 
-  if (updateError) {
-    throw new Error(updateError.message);
-  }
 
   revalidatePath("/attributions");
+
   revalidatePath("/materiels");
+
   revalidatePath("/dashboard");
+
   revalidatePath("/destinataires");
-  
-  return { attribution_id: attribution?.id };
+
+
+
+  return { attribution_id: attributionId };
+
 }
+
+
 
 export async function restituerAttribution(input: {
+
   attribution_id: string;
+
   materiel_id: string;
+
   etat_restitution?: string | null;
+
   commentaire?: string | null;
+
 }) {
+
   const supabase = await createSupabaseServerClient();
 
-  const { error: updateAttrError } = await supabase
-    .from("attributions")
-    .update({
-      statut: "Restitué",
-      date_restitution: new Date().toISOString().slice(0, 10),
-      etat_restitution: input.etat_restitution || null,
-      commentaire: input.commentaire || null,
-    })
-    .eq("id", input.attribution_id);
 
-  if (updateAttrError) {
-    throw new Error(updateAttrError.message);
-  }
 
-  const { error: updateMatError } = await supabase
-    .from("materiels")
-    .update({ statut: "Stock" })
-    .eq("id", input.materiel_id);
+  await restituerAttributionWithFallback(supabase, input);
 
-  if (updateMatError) {
-    throw new Error(updateMatError.message);
-  }
+
 
   revalidatePath("/attributions");
+
   revalidatePath("/materiels");
+
   revalidatePath("/dashboard");
+
+  revalidatePath("/destinataires");
+
 }
+
+
 
 export async function createOnboardingAttribution(input: {
+
   employe_id: string;
+
   materiel_ids: string[];
+
   date_attribution: string;
+
   commentaire?: string | null;
+
 }) {
+
   const supabase = await createSupabaseServerClient();
 
+
+
   if (!input.employe_id) {
+
     throw new Error("Veuillez sélectionner un employé.");
+
   }
+
+
 
   if (!input.materiel_ids || input.materiel_ids.length === 0) {
+
     throw new Error("Veuillez sélectionner au moins un matériel.");
+
   }
+
+
 
   const attribution_ids: string[] = [];
+
   const numeros: string[] = [];
 
-  // Créer une attribution pour chaque matériel
+
+
   for (const materiel_id of input.materiel_ids) {
-    // Générer le numéro d'attribution
-    const { data: numeroData, error: numeroError } = await supabase.rpc("generate_numero_attribution");
-    
-    if (numeroError) {
-      console.error("Erreur génération numéro:", numeroError);
-    }
 
-    const numero = numeroData || `ATR-${new Date().getFullYear()}-${Math.random().toString(36).substr(2, 9)}`;
-    numeros.push(numero);
+    await assertMaterielAvailableForAttribution(supabase, materiel_id);
 
-    // Insérer l'attribution
-    const { data: attribution, error: insertError } = await supabase
+
+
+    const attributionId = await createAttributionWithFallback(supabase, {
+
+      materiel_id,
+
+      employe_id: input.employe_id,
+
+      entite_id: null,
+
+      beneficiaire_type: "employe",
+
+      beneficiaire_label: "Employé",
+
+      date_attribution: input.date_attribution,
+
+      commentaire: input.commentaire ?? null,
+
+    });
+
+
+
+    attribution_ids.push(attributionId);
+
+
+
+    const { data: attr } = await supabase
+
       .from("attributions")
-      .insert({
-        materiel_id,
-        employe_id: input.employe_id,
-        date_attribution: input.date_attribution,
-        statut: "Actif",
-        numero_attribution: numero,
-        beneficiaire_type: "employe",
-        beneficiaire_label: "Employé",
-        commentaire: input.commentaire ?? null,
-      })
-      .select("id")
-      .single();
 
-    if (insertError) {
-      throw new Error(`Erreur lors de l'attribution: ${insertError.message}`);
+      .select("numero_attribution")
+
+      .eq("id", attributionId)
+
+      .maybeSingle();
+
+
+
+    if (attr?.numero_attribution) {
+
+      numeros.push(attr.numero_attribution);
+
     }
 
-    if (attribution?.id) {
-      attribution_ids.push(attribution.id);
-    }
-
-    // Mettre à jour le statut du matériel
-    const { error: updateError } = await supabase
-      .from("materiels")
-      .update({ statut: "Attribué" })
-      .eq("id", materiel_id);
-
-    if (updateError) {
-      throw new Error(`Erreur mise à jour matériel: ${updateError.message}`);
-    }
   }
 
+
+
   revalidatePath("/attributions");
+
   revalidatePath("/materiels");
+
   revalidatePath("/dashboard");
+
   revalidatePath("/employes");
 
-  return { 
+  revalidatePath("/destinataires");
+
+
+
+  return {
+
     attribution_ids,
+
     numeros,
-    count: attribution_ids.length 
+
+    count: attribution_ids.length,
+
   };
+
 }
+

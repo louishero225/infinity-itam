@@ -6,17 +6,18 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import { createMateriel, updateMateriel } from "@/app/(app)/materiels/actions";
+import { createMateriel, suggestNextMaterielCode, updateMateriel } from "@/app/(app)/materiels/actions";
 import { getEntites, type EntiteRow } from "@/app/(app)/entites/actions";
 import { EntiteSelect } from "@/components/app/beneficiaire/entite-select";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { uploadMaterielPhoto } from "@/lib/supabase/storage";
 import { MATERIEL_TYPES, codePrefixForType } from "@/lib/utils/materiel-taxonomy";
+import Image from "next/image";
 import { Upload, X } from "lucide-react";
+import { FormDialogContent } from "@/components/app/form-dialog-content";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
@@ -26,6 +27,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -110,6 +112,9 @@ export function MaterielFormDialog({
   const [loadingEmployes, setLoadingEmployes] = React.useState(false);
   const [uploadingPhoto, setUploadingPhoto] = React.useState(false);
   const [photoPreview, setPhotoPreview] = React.useState<string | null>(null);
+  const [suggestedCode, setSuggestedCode] = React.useState<string | null>(null);
+  const [loadingSuggestedCode, setLoadingSuggestedCode] = React.useState(false);
+  const codeManuallyEdited = React.useRef(false);
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -124,7 +129,39 @@ export function MaterielFormDialog({
   const statut = form.watch("statut");
   const beneficiaireType = form.watch("beneficiaire_type");
   const watchedType = form.watch("type");
-  const codePlaceholder = `${codePrefixForType(watchedType)}-001`;
+  const codePlaceholder = suggestedCode ?? `${codePrefixForType(watchedType)}-001`;
+
+  React.useEffect(() => {
+    if (!open || mode !== "create" || !watchedType || codeManuallyEdited.current) {
+      if (!watchedType) setSuggestedCode(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadSuggestedCode() {
+      try {
+        setLoadingSuggestedCode(true);
+        const next = await suggestNextMaterielCode(watchedType);
+        if (cancelled) return;
+        setSuggestedCode(next);
+        form.setValue("code_materiel", next, { shouldValidate: true });
+      } catch (e) {
+        if (!cancelled) {
+          toast.error(
+            e instanceof Error ? e.message : "Impossible de proposer un code matériel"
+          );
+        }
+      } finally {
+        if (!cancelled) setLoadingSuggestedCode(false);
+      }
+    }
+
+    loadSuggestedCode();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, mode, watchedType, form]);
 
   React.useEffect(() => {
     if (statut !== "Attribué") return;
@@ -197,7 +234,7 @@ export function MaterielFormDialog({
         if (error) throw new Error(error.message);
         if (!data || cancelled) return;
 
-        form.setValue("beneficiaire_type", (data.beneficiaire_type ?? "employe") as any);
+        form.setValue("beneficiaire_type", (data.beneficiaire_type ?? "employe") as Values["beneficiaire_type"]);
         form.setValue("beneficiaire_label", data.beneficiaire_label ?? undefined);
         form.setValue("employe_id", data.employe_id ?? undefined);
         form.setValue("entite_id", data.entite_id ?? undefined);
@@ -216,6 +253,8 @@ export function MaterielFormDialog({
   React.useEffect(() => {
     if (!open) return;
     if (mode !== "edit" || !initialValues) {
+      codeManuallyEdited.current = false;
+      setSuggestedCode(null);
       form.reset({
         statut: "Stock",
         etat: "Bon",
@@ -327,6 +366,8 @@ export function MaterielFormDialog({
 
         toast.success("Matériel ajouté");
         setPhotoPreview(null);
+        codeManuallyEdited.current = false;
+        setSuggestedCode(null);
         form.reset({
           statut: "Stock",
           etat: "Bon",
@@ -347,11 +388,11 @@ export function MaterielFormDialog({
           {triggerLabel ?? (mode === "edit" ? "Modifier" : "Ajouter")}
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <FormDialogContent size="lg">
         <DialogHeader>
           <DialogTitle>{mode === "edit" ? "Modifier matériel" : "Nouveau matériel"}</DialogTitle>
           <DialogDescription>
-            Ajoute un matériel au parc (inventaire, info technique, statut).
+            Ajoutez un matériel au parc (inventaire, informations techniques, statut).
           </DialogDescription>
         </DialogHeader>
 
@@ -365,8 +406,26 @@ export function MaterielFormDialog({
                   <FormItem>
                     <FormLabel>Code matériel</FormLabel>
                     <FormControl>
-                      <Input placeholder={codePlaceholder} {...field} />
+                      <Input
+                        placeholder={codePlaceholder}
+                        {...field}
+                        onChange={(event) => {
+                          if (mode === "create") {
+                            codeManuallyEdited.current = true;
+                          }
+                          field.onChange(event);
+                        }}
+                      />
                     </FormControl>
+                    {mode === "create" && watchedType ? (
+                      <FormDescription>
+                        {loadingSuggestedCode
+                          ? "Calcul du prochain code..."
+                          : suggestedCode
+                            ? `Code proposé : ${suggestedCode}`
+                            : `Format attendu : ${codePrefixForType(watchedType)}-XXX`}
+                      </FormDescription>
+                    ) : null}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -544,9 +603,9 @@ export function MaterielFormDialog({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="employe">👤 Personne (employé)</SelectItem>
-                            <SelectItem value="departement">🏢 Département / entité</SelectItem>
-                            <SelectItem value="societe">🏛️ Société</SelectItem>
+                            <SelectItem value="employe">Personne (employé)</SelectItem>
+                            <SelectItem value="departement">Département / entité</SelectItem>
+                            <SelectItem value="societe">Société</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -559,7 +618,7 @@ export function MaterielFormDialog({
                     name="date_attribution"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Date d'attribution</FormLabel>
+                        <FormLabel>Date d&apos;attribution</FormLabel>
                         <FormControl>
                           <Input type="date" {...field} />
                         </FormControl>
@@ -633,7 +692,7 @@ export function MaterielFormDialog({
                 name="date_achat"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Date d'achat</FormLabel>
+                    <FormLabel>Date d&apos;achat</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} />
                     </FormControl>
@@ -672,10 +731,12 @@ export function MaterielFormDialog({
               <div className="mt-2 flex flex-col gap-3">
                 {photoPreview && (
                   <div className="relative w-32 h-32 border rounded-lg overflow-hidden">
-                    <img
+                    <Image
                       src={photoPreview}
                       alt="Aperçu"
-                      className="w-full h-full object-cover"
+                      fill
+                      unoptimized
+                      className="object-cover"
                     />
                     <button
                       type="button"
@@ -693,7 +754,7 @@ export function MaterielFormDialog({
                   <div className="flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-accent w-fit">
                     <Upload className="h-4 w-4" />
                     <span className="text-sm">
-                      {uploadingPhoto ? "Upload en cours..." : "Choisir une photo"}
+                      {uploadingPhoto ? "Téléversement en cours..." : "Choisir une photo"}
                     </span>
                   </div>
                   <input
@@ -711,11 +772,11 @@ export function MaterielFormDialog({
                         if (url) {
                           setPhotoPreview(url);
                           form.setValue("photo_url", url);
-                          toast.success("Photo uploadée");
+                          toast.success("Photo téléversée");
                         } else {
                           toast.error("Erreur lors de l'upload");
                         }
-                      } catch (error) {
+                      } catch {
                         toast.error("Erreur lors de l'upload");
                       } finally {
                         setUploadingPhoto(false);
@@ -750,7 +811,7 @@ export function MaterielFormDialog({
             </DialogFooter>
           </form>
         </Form>
-      </DialogContent>
+      </FormDialogContent>
     </Dialog>
   );
 }

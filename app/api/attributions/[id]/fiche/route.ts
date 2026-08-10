@@ -1,12 +1,15 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireUserApi } from "@/lib/auth/require-user-api";
 import { NextResponse } from "next/server";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireUserApi();
+  if (auth.response) return auth.response;
+
   const { id } = await params;
-  const supabase = await createSupabaseServerClient();
+  const supabase = auth.supabase;
 
   const { data: attribution, error } = await supabase
     .from("attributions")

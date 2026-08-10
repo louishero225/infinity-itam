@@ -11,8 +11,8 @@ type AttributionsFiltersProps = {
 };
 
 const DESTINATAIRE_OPTIONS = [
-  { value: "employe", label: "👤 Par employé" },
-  { value: "entite", label: "🏢 Par entité" },
+  { value: "employe", label: "Par employé" },
+  { value: "entite", label: "Par entité" },
 ] as const;
 
 export function AttributionsFilters({ departements, types }: AttributionsFiltersProps) {

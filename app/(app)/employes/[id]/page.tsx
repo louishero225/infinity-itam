@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/app/page-header";
 import {
   Table,
   TableBody,
@@ -85,23 +86,19 @@ export default async function EmployeDetailPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">
-            {employe.prenom} {employe.nom}
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            {employe.departement}
-            {employe.service ? ` • ${employe.service}` : ""}
-            {employe.fonction ? ` • ${employe.fonction}` : ""}
-          </p>
-        </div>
-        <EmployeActions
-          employeId={id}
-          employeNom={`${employe.prenom} ${employe.nom}`}
-          nombreMateriels={nombreMaterielsActifs}
-        />
-      </div>
+      <PageHeader
+        title={`${employe.prenom} ${employe.nom}`}
+        description={`${employe.departement}${employe.service ? ` • ${employe.service}` : ""}${employe.fonction ? ` • ${employe.fonction}` : ""}`}
+        backHref="/destinataires?tab=personnes"
+        backLabel="Retour aux destinataires"
+        actions={
+          <EmployeActions
+            employeId={id}
+            employeNom={`${employe.prenom} ${employe.nom}`}
+            nombreMateriels={nombreMaterielsActifs}
+          />
+        }
+      />
 
       <Card>
         <CardHeader>

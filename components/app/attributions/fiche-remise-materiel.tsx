@@ -1,10 +1,10 @@
 "use client";
 
 import { useRef } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { FileText, Printer } from "lucide-react";
-import { getMaterielIcon } from "@/lib/utils/materiel-icons";
 
 type FicheData = {
   attribution_id: string;
@@ -109,7 +109,11 @@ export function FicheRemiseMateriel({ data }: { data: FicheData }) {
                   border-bottom: 2px solid #e5e7eb;
                 }
                 .section-icon {
-                  font-size: 18px;
+                  width: 6px;
+                  height: 6px;
+                  border-radius: 1px;
+                  background: currentColor;
+                  flex-shrink: 0;
                 }
                 .info-grid {
                   display: grid;
@@ -258,7 +262,13 @@ export function FicheRemiseMateriel({ data }: { data: FicheData }) {
         <div ref={ficheRef} className="bg-white">
           <div className="page-header">
             <div className="logo-box">
-              <img src="/IAG 11 - Copie.jpg" alt="Logo entreprise" />
+              <Image
+                src="/IAG 11 - Copie.jpg"
+                alt="Logo entreprise"
+                width={120}
+                height={50}
+                className="max-h-full max-w-full object-contain"
+              />
             </div>
             <div className="title-box">
               <h1>FICHE DE REMISE<br/>DE MATÉRIEL</h1>
@@ -276,7 +286,7 @@ export function FicheRemiseMateriel({ data }: { data: FicheData }) {
 
           <div className="section">
             <div className="section-header">
-              <span className="section-icon">👤</span>
+              <span className="section-icon" aria-hidden="true" />
               <span>BÉNÉFICIAIRE</span>
             </div>
             <div className="info-grid">
@@ -299,7 +309,7 @@ export function FicheRemiseMateriel({ data }: { data: FicheData }) {
 
           <div className="section">
             <div className="section-header">
-              <span className="section-icon">💻</span>
+              <span className="section-icon" aria-hidden="true" />
               <span>DÉTAILS DU MATÉRIEL</span>
             </div>
             <div className="info-grid">
@@ -338,12 +348,12 @@ export function FicheRemiseMateriel({ data }: { data: FicheData }) {
 
           <div className="section">
             <div className="section-header">
-              <span className="section-icon">☑</span>
-              <span>CONDITIONS D'UTILISATION</span>
+              <span className="section-icon" aria-hidden="true" />
+              <span>CONDITIONS D&apos;UTILISATION</span>
             </div>
             <ul className="conditions-list">
-              <li>Le bénéficiaire s'engage à utiliser le matériel dans le cadre professionnel uniquement.</li>
-              <li>Le matériel reste la propriété de l'entreprise et doit être restitué sur demande.</li>
+              <li>Le bénéficiaire s&apos;engage à utiliser le matériel dans le cadre professionnel uniquement.</li>
+              <li>Le matériel reste la propriété de l&apos;entreprise et doit être restitué sur demande.</li>
               <li>Le bénéficiaire est responsable du matériel et doit signaler tout dysfonctionnement.</li>
               <li>Toute perte ou dégradation anormale devra être déclarée immédiatement.</li>
             </ul>
@@ -357,7 +367,7 @@ export function FicheRemiseMateriel({ data }: { data: FicheData }) {
             </div>
             <div className="signature-block">
               <div className="signature-title">LE BÉNÉFICIAIRE</div>
-              <div className="signature-area">Signature (précédée de "Lu et approuvé")</div>
+              <div className="signature-area">Signature (précédée de &quot;Lu et approuvé&quot;)</div>
               <div className="signature-date">Date : .... / .... / 20....</div>
             </div>
           </div>

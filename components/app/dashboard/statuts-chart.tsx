@@ -8,6 +8,7 @@ import {
   ResponsiveContainer,
   Legend,
   Tooltip,
+  type PieLabelRenderProps,
 } from "recharts";
 
 type StatutsChartProps = {
@@ -18,22 +19,21 @@ type StatutsChartProps = {
   }[];
 };
 
-const COLORS = {
-  Stock: "#10b981",
-  Attribué: "#3b82f6",
-  Maintenance: "#f59e0b",
-  Transit: "#6b7280",
+import { statutChartColors, chartTooltipStyle } from "@/lib/ui/chart-theme";
+
+type TooltipPayload = {
+  payload?: { percentage: number };
 };
 
 export function StatutsChart({ data }: StatutsChartProps) {
   const renderCustomLabel = ({
-    cx,
-    cy,
-    midAngle,
-    innerRadius,
-    outerRadius,
-    percent,
-  }: any) => {
+    cx = 0,
+    cy = 0,
+    midAngle = 0,
+    innerRadius = 0,
+    outerRadius = 0,
+    percent = 0,
+  }: PieLabelRenderProps) => {
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
     const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
@@ -78,20 +78,22 @@ export function StatutsChart({ data }: StatutsChartProps) {
               {data.map((entry, index) => (
                 <Cell
                   key={`cell-${index}`}
-                  fill={COLORS[entry.statut as keyof typeof COLORS] || "#6b7280"}
+                  fill={statutChartColors[entry.statut] || "var(--chart-5)"}
                 />
               ))}
             </Pie>
             <Tooltip
-              formatter={(value: number | undefined, name: string | undefined, props: any) => [
-                value ? `${value} (${props.payload.percentage.toFixed(1)}%)` : "0",
+              formatter={(
+                value: number | undefined,
+                name: string | undefined,
+                props: TooltipPayload
+              ) => [
+                value
+                  ? `${value} (${props.payload?.percentage.toFixed(1) ?? 0}%)`
+                  : "0",
                 name || "",
               ]}
-              contentStyle={{
-                backgroundColor: "rgba(255, 255, 255, 0.95)",
-                border: "1px solid #e5e7eb",
-                borderRadius: "6px",
-              }}
+              contentStyle={chartTooltipStyle}
             />
             <Legend verticalAlign="bottom" height={36} />
           </PieChart>

@@ -1,7 +1,6 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Laptop, Building2, Calendar } from "lucide-react";
+import { StatCard } from "@/components/app/stat-card";
 
 type AttributionsStatsProps = {
   total: number;
@@ -15,65 +14,35 @@ export function AttributionsStats({
   total,
   parEmploye,
   parDepartement,
-  parSociete,
   dureeeMoyenne,
-}: AttributionsStatsProps) {
+}: Omit<AttributionsStatsProps, "parSociete"> & { parSociete?: number }) {
   const formatDuree = (jours: number | undefined) => {
     if (!jours) return "—";
-    if (jours < 30) return `${Math.round(jours)}j`;
-    if (jours < 365) return `${Math.round(jours / 30)}m`;
-    return `${(jours / 365).toFixed(1)}a`;
+    if (jours < 30) return `${Math.round(jours)} j`;
+    if (jours < 365) return `${Math.round(jours / 30)} mois`;
+    return `${(jours / 365).toFixed(1)} an`;
   };
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card className="border-l-4 border-l-blue-500">
-        <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-sm font-medium">Total actif</CardTitle>
-          <Laptop className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{total}</div>
-          <p className="text-xs text-muted-foreground mt-1">attributions</p>
-        </CardContent>
-      </Card>
-
-      <Card className="border-l-4 border-l-green-500">
-        <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-sm font-medium">Par employé</CardTitle>
-          <Users className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{parEmploye}</div>
-          <p className="text-xs text-muted-foreground mt-1">
-            {total > 0 ? Math.round((parEmploye / total) * 100) : 0}% du total
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card className="border-l-4 border-l-purple-500">
-        <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-sm font-medium">Par département</CardTitle>
-          <Building2 className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{parDepartement}</div>
-          <p className="text-xs text-muted-foreground mt-1">
-            {total > 0 ? Math.round((parDepartement / total) * 100) : 0}% du total
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card className="border-l-4 border-l-orange-500">
-        <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-sm font-medium">Durée moyenne</CardTitle>
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{formatDuree(dureeeMoyenne)}</div>
-          <p className="text-xs text-muted-foreground mt-1">possession</p>
-        </CardContent>
-      </Card>
+      <StatCard label="Total actif" value={total} hint="attributions" />
+      <StatCard
+        label="Par employé"
+        value={parEmploye}
+        hint={`${total > 0 ? Math.round((parEmploye / total) * 100) : 0} % du total`}
+        accent="success"
+      />
+      <StatCard
+        label="Par département"
+        value={parDepartement}
+        hint={`${total > 0 ? Math.round((parDepartement / total) * 100) : 0} % du total`}
+      />
+      <StatCard
+        label="Durée moyenne"
+        value={formatDuree(dureeeMoyenne)}
+        hint="possession"
+        accent="muted"
+      />
     </div>
   );
 }

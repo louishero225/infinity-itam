@@ -8,10 +8,10 @@ import { toast } from "sonner";
 
 import { createReparation, updateReparation } from "@/app/(app)/reparations/actions";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { FormDialogContent } from "@/components/app/form-dialog-content";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
@@ -60,6 +60,8 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
+export type ReparationFormValues = Values;
+
 type MaterielOption = { id: string; code_materiel: string; type: string };
 
 export function ReparationFormDialog({
@@ -71,7 +73,7 @@ export function ReparationFormDialog({
 }) {
   const [open, setOpen] = React.useState(false);
   const [materiels, setMateriels] = React.useState<MaterielOption[]>([]);
-  const [loading, setLoading] = React.useState(false);
+  const [, setLoading] = React.useState(false);
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -128,13 +130,13 @@ export function ReparationFormDialog({
       materiel_id: initialValues.materiel_id ?? "",
       date_debut: initialValues.date_debut ?? "",
       date_fin: initialValues.date_fin ?? undefined,
-      type_intervention: initialValues.type_intervention as any,
+      type_intervention: initialValues.type_intervention ?? "Réparation",
       description: initialValues.description ?? "",
       cout: initialValues.cout ?? undefined,
       prestataire: initialValues.prestataire ?? undefined,
       numero_ticket: initialValues.numero_ticket ?? undefined,
-      statut: (initialValues.statut as any) ?? "En cours",
-      priorite: (initialValues.priorite as any) ?? "Normale",
+      statut: initialValues.statut ?? "En cours",
+      priorite: initialValues.priorite ?? "Normale",
       pieces_changees: initialValues.pieces_changees ?? undefined,
       diagnostique: initialValues.diagnostique ?? undefined,
       resolution: initialValues.resolution ?? undefined,
@@ -194,7 +196,7 @@ export function ReparationFormDialog({
           {mode === "edit" ? "Modifier" : "Ajouter"}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <FormDialogContent size="lg">
         <DialogHeader>
           <DialogTitle>
             {mode === "edit" ? "Modifier réparation" : "Nouvelle réparation"}
@@ -435,7 +437,7 @@ export function ReparationFormDialog({
             </DialogFooter>
           </form>
         </Form>
-      </DialogContent>
+      </FormDialogContent>
     </Dialog>
   );
 }

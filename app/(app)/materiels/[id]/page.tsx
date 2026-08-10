@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/app/page-header";
 import {
   Table,
   TableBody,
@@ -111,19 +112,12 @@ export default async function MaterielDetailPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">{materiel.code_materiel}</h1>
-          <p className="text-muted-foreground text-sm">
-            {materiel.type}
-            {materiel.marque ? ` • ${materiel.marque}` : ""}
-            {materiel.modele ? ` / ${materiel.modele}` : ""}
-          </p>
-        </div>
-        <Link href="/materiels" className="text-sm underline">
-          Retour
-        </Link>
-      </div>
+      <PageHeader
+        title={materiel.code_materiel}
+        description={`${materiel.type}${materiel.marque ? ` • ${materiel.marque}` : ""}${materiel.modele ? ` / ${materiel.modele}` : ""}`}
+        backHref="/materiels"
+        backLabel="Retour au matériel"
+      />
 
       <Card>
         <CardHeader>

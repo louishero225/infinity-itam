@@ -20,8 +20,7 @@ export async function genererNumeroDemandeAchat(): Promise<string> {
     .limit(1);
 
   if (error) {
-    console.error("Erreur lors de la génération du numéro:", error);
-    return `${prefixe}-001`;
+    throw new Error(`Erreur lors de la génération du numéro: ${error.message}`);
   }
 
   // Si aucune demande ce mois-ci, commencer à 001
@@ -152,7 +151,14 @@ export async function deleteDemandeAchat(id: string) {
 export async function changerStatutDemande(id: string, nouveauStatut: string) {
   const supabase = await createSupabaseServerClient();
 
-  const updates: any = { statut: nouveauStatut };
+  const updates: {
+    statut: string;
+    date_approbation?: string;
+    date_decaissement?: string;
+    date_reception?: string;
+    date_mise_production?: string;
+    materiel_id?: string;
+  } = { statut: nouveauStatut };
 
   // Auto-remplir les dates selon le statut
   const today = new Date().toISOString().slice(0, 10);
@@ -190,8 +196,11 @@ export async function changerStatutDemande(id: string, nouveauStatut: string) {
         .select()
         .single();
 
-      if (!materielError && nouveauMateriel) {
-        // Lier le matériel à la demande d'achat
+      if (materielError) {
+        throw new Error(`Impossible de créer le matériel: ${materielError.message}`);
+      }
+
+      if (nouveauMateriel) {
         updates.materiel_id = nouveauMateriel.id;
       }
     }

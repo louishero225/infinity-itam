@@ -2,6 +2,12 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  chartAxisStroke,
+  chartColors,
+  chartGridStroke,
+  chartTooltipStyle,
+} from "@/lib/ui/chart-theme";
+import {
   AreaChart,
   Area,
   XAxis,
@@ -43,40 +49,36 @@ export function CoutsChart({ data }: CoutsChartProps) {
           <AreaChart data={data}>
             <defs>
               <linearGradient id="colorAchats" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1} />
+                <stop offset="5%" stopColor={chartColors.primary} stopOpacity={0.8} />
+                <stop offset="95%" stopColor={chartColors.primary} stopOpacity={0.1} />
               </linearGradient>
               <linearGradient id="colorReparations" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.1} />
+                <stop offset="5%" stopColor={chartColors.quaternary} stopOpacity={0.8} />
+                <stop offset="95%" stopColor={chartColors.quaternary} stopOpacity={0.1} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} />
             <XAxis
               dataKey="mois"
-              stroke="#6b7280"
+              stroke={chartAxisStroke}
               fontSize={12}
               tickLine={false}
             />
             <YAxis
-              stroke="#6b7280"
+              stroke={chartAxisStroke}
               fontSize={12}
               tickLine={false}
               tickFormatter={formatMoney}
             />
             <Tooltip
-              contentStyle={{
-                backgroundColor: "rgba(255, 255, 255, 0.95)",
-                border: "1px solid #e5e7eb",
-                borderRadius: "6px",
-              }}
+              contentStyle={chartTooltipStyle}
               formatter={(value: number | undefined) => value ? formatMoney(value) : "0"}
             />
             <Legend />
             <Area
               type="monotone"
               dataKey="achats"
-              stroke="#3b82f6"
+              stroke={chartColors.primary}
               fillOpacity={1}
               fill="url(#colorAchats)"
               name="Achats"
@@ -84,7 +86,7 @@ export function CoutsChart({ data }: CoutsChartProps) {
             <Area
               type="monotone"
               dataKey="reparations"
-              stroke="#f59e0b"
+              stroke={chartColors.quaternary}
               fillOpacity={1}
               fill="url(#colorReparations)"
               name="Réparations"

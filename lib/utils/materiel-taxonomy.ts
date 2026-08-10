@@ -107,6 +107,61 @@ export function codePrefixForType(type: string) {
   return TYPE_CODE_PREFIX[normalizeMaterielType(type)] ?? "IAG";
 }
 
+/** Motifs SQL ilike pour retrouver les codes d'un préfixe (IAG-TEL + legacy TEL) */
+export function codeSearchPatternsForPrefix(prefix: string): string[] {
+  const normalized = prefix.trim().toUpperCase();
+  const patterns = [`${normalized}-%`];
+
+  for (const [legacy, iag] of Object.entries(CODE_PREFIX_MAP)) {
+    if (iag === normalized) {
+      patterns.push(`${legacy}-%`);
+    }
+  }
+
+  return patterns;
+}
+
+/** Extrait préfixe + numéro séquentiel d'un code normalisé (ex. IAG-TEL-049) */
+export function parseMaterielCodeSequence(code: string | null | undefined): {
+  prefix: string;
+  number: number;
+  padLength: number;
+} | null {
+  const normalized = normalizeMaterielCode(code);
+  if (!normalized) return null;
+
+  const match = normalized.match(/^(IAG-[A-Z0-9]+)-(\d+)$/);
+  if (!match) return null;
+
+  return {
+    prefix: match[1],
+    number: Number.parseInt(match[2], 10),
+    padLength: match[2].length,
+  };
+}
+
+/** Propose le code suivant à partir d'une liste existante pour un préfixe donné */
+export function computeNextMaterielCode(
+  existingCodes: string[],
+  prefix: string
+): string {
+  const normalizedPrefix = prefix.trim().toUpperCase();
+  let maxNumber = 0;
+  let padLength = 3;
+
+  for (const raw of existingCodes) {
+    const parsed = parseMaterielCodeSequence(raw);
+    if (!parsed || parsed.prefix !== normalizedPrefix) continue;
+    if (parsed.number > maxNumber) {
+      maxNumber = parsed.number;
+      padLength = Math.max(padLength, parsed.padLength);
+    }
+  }
+
+  const nextNumber = maxNumber + 1;
+  return `${normalizedPrefix}-${String(nextNumber).padStart(padLength, "0")}`;
+}
+
 export function isLegacyCode(code: string | null | undefined): boolean {
   if (!code?.trim()) return false;
   const trimmed = code.trim().toUpperCase();

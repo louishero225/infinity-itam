@@ -1,19 +1,36 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { 
-  FileText, 
-  DollarSign, 
-  Users, 
-  TrendingUp, 
-  Package, 
-  AlertCircle,
-  Download
-} from "lucide-react";
+import { DollarSign, Users, Package, Download } from "lucide-react";
+import Link from "next/link";
+
+import { PageHeader } from "@/components/app/page-header";
+import { StatCard } from "@/components/app/stat-card";
 import { ExportButtons } from "@/components/app/rapports/export-buttons";
 import { TcoDepartementChart } from "@/components/app/rapports/tco-departement-chart";
 import { TimelineAttributionsChart } from "@/components/app/rapports/timeline-attributions-chart";
 import { LicencesUtilisationChart } from "@/components/app/rapports/licences-utilisation-chart";
-import Link from "next/link";
+
+function formatMoney(value: number) {
+  return `${new Intl.NumberFormat("fr-FR").format(value)} FCFA`;
+}
+
+type AttributionParDept = {
+  employe: { departement: string | null } | { departement: string | null }[] | null;
+  materiel: { cout: number | null } | { cout: number | null }[] | null;
+};
+
+type HistoriqueAction = {
+  action: string;
+  date_action: string;
+};
+
+type LicenceUtilisation = {
+  nom: string;
+  nombre_total: number;
+  nombre_utilise: number | null;
+  cout: number | null;
+  statut: string | null;
+};
 
 export default async function RapportsPage() {
   const supabase = await createSupabaseServerClient();
@@ -62,10 +79,14 @@ export default async function RapportsPage() {
 
   const tcoDepartements = new Map<string, { cout_materiel: number; cout_licences: number; cout_reparations: number }>();
   
-  (attributionsParDept || []).forEach((attr: any) => {
-    const dept = attr.employe?.departement || "Non renseigné";
+  (attributionsParDept || []).forEach((attr: AttributionParDept) => {
+    const employeRaw = attr.employe;
+    const employe = Array.isArray(employeRaw) ? employeRaw[0] : employeRaw;
+    const materielRaw = attr.materiel;
+    const materiel = Array.isArray(materielRaw) ? materielRaw[0] : materielRaw;
+    const dept = employe?.departement || "Non renseigné";
     const current = tcoDepartements.get(dept) || { cout_materiel: 0, cout_licences: 0, cout_reparations: 0 };
-    current.cout_materiel += attr.materiel?.cout || 0;
+    current.cout_materiel += materiel?.cout || 0;
     tcoDepartements.set(dept, current);
   });
 
@@ -105,7 +126,7 @@ export default async function RapportsPage() {
     timelineByMonth.set(key, { attributions: 0, restitutions: 0 });
   }
 
-  (historiqueData || []).forEach((h: any) => {
+  (historiqueData || []).forEach((h: HistoriqueAction) => {
     const date = new Date(h.date_action);
     const key = date.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
     const current = timelineByMonth.get(key);
@@ -127,12 +148,12 @@ export default async function RapportsPage() {
 
   // 3. Utilisation licences
   const licencesUtilisationData = (licencesData || [])
-    .filter((l: any) => l.nombre_total > 0)
-    .map((l: any) => ({
+    .filter((l: LicenceUtilisation) => l.nombre_total > 0)
+    .map((l: LicenceUtilisation) => ({
       nom: l.nom,
       utilisees: l.nombre_utilise || 0,
       disponibles: l.nombre_total - (l.nombre_utilise || 0),
-      taux: l.nombre_total > 0 ? Math.round((l.nombre_utilise / l.nombre_total) * 100) : 0,
+      taux: l.nombre_total > 0 ? Math.round(((l.nombre_utilise ?? 0) / l.nombre_total) * 100) : 0,
     }))
     .slice(0, 8);
 
@@ -140,20 +161,16 @@ export default async function RapportsPage() {
   const rapportsPredéfinis = [
     {
       titre: "Rapport Inventaire",
-      description: "Parc complet avec détails matériel, statuts, et affectations",
+      description: "Parc complet avec détails matériel, statuts et affectations",
       icon: Package,
       stats: `${totalMateriel} équipements`,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
       href: "/materiels",
     },
     {
       titre: "Rapport Financier",
-      description: "Coûts totaux: parc, licences, réparations, et achats",
+      description: "Coûts totaux : parc, licences, réparations et achats",
       icon: DollarSign,
-      stats: `${new Intl.NumberFormat("fr-FR").format(coutTotalParc + coutTotalAnnuel)} FCFA`,
-      color: "text-green-600",
-      bgColor: "bg-green-50",
+      stats: formatMoney(coutTotalParc + coutTotalAnnuel),
       href: "/achats",
     },
     {
@@ -161,92 +178,64 @@ export default async function RapportsPage() {
       description: "Employés et matériel attribué par département",
       icon: Users,
       stats: `${totalEmployes} employés`,
-      color: "text-purple-600",
-      bgColor: "bg-purple-50",
       href: "/employes",
     },
   ];
-
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold">Rapports & Analytics</h1>
-        <p className="text-muted-foreground text-sm">
-          Rapports prédéfinis, statistiques avancées, et exports de données.
-        </p>
-      </div>
+      <PageHeader
+        title="Rapports & Analytics"
+        description="Rapports prédéfinis, statistiques avancées et exports de données."
+      />
 
-      {/* KPI Analytics */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground">TCO par employé</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {new Intl.NumberFormat("fr-FR").format(tcoParEmploye)} FCFA
-            </div>
-            <p className="text-muted-foreground text-xs mt-1">coût moyen total</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground">Coût licences/an</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {new Intl.NumberFormat("fr-FR").format(coutLicences)} FCFA
-            </div>
-            <p className="text-muted-foreground text-xs mt-1">abonnements logiciels</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground">Coût réparations</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
-              {new Intl.NumberFormat("fr-FR").format(coutReparations)} FCFA
-            </div>
-            <p className="text-muted-foreground text-xs mt-1">maintenance cumulée</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground">Taux licences</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{tauxUtilisationLicences}%</div>
-            <p className="text-muted-foreground text-xs mt-1">licences actives</p>
-          </CardContent>
-        </Card>
+        <StatCard
+          label="TCO par employé"
+          value={formatMoney(tcoParEmploye)}
+          hint="coût moyen total"
+          accent="muted"
+        />
+        <StatCard
+          label="Coût licences / an"
+          value={formatMoney(coutLicences)}
+          hint="abonnements logiciels"
+        />
+        <StatCard
+          label="Coût réparations"
+          value={formatMoney(coutReparations)}
+          hint="maintenance cumulée"
+          accent="warning"
+        />
+        <StatCard
+          label="Taux licences"
+          value={`${tauxUtilisationLicences} %`}
+          hint="licences actives"
+          accent="success"
+        />
       </div>
 
-      {/* Rapports prédéfinis */}
       <div>
-        <h2 className="text-lg font-semibold mb-4">Rapports prédéfinis</h2>
+        <h2 className="mb-4 text-lg font-semibold tracking-tight">Rapports prédéfinis</h2>
         <div className="grid gap-4 md:grid-cols-3">
           {rapportsPredéfinis.map((rapport) => {
             const Icon = rapport.icon;
             return (
               <Link key={rapport.titre} href={rapport.href}>
-                <Card className="hover:border-primary transition-all cursor-pointer h-full">
+                <Card className="h-full cursor-pointer transition-all duration-200 hover:border-primary/30 hover:shadow-md">
                   <CardHeader>
                     <div className="flex items-start justify-between">
-                      <div className={`p-3 rounded-lg ${rapport.bgColor}`}>
-                        <Icon className={`h-6 w-6 ${rapport.color}`} />
+                      <div className="bg-muted rounded-lg p-3">
+                        <Icon className="text-foreground size-6" />
                       </div>
-                      <Download className="h-4 w-4 text-muted-foreground" />
+                      <Download className="text-muted-foreground size-4" />
                     </div>
-                    <CardTitle className="text-base mt-3">{rapport.titre}</CardTitle>
+                    <CardTitle className="mt-3 text-base">{rapport.titre}</CardTitle>
                     <CardDescription className="text-xs">{rapport.description}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center justify-between">
-                      <span className={`text-sm font-semibold ${rapport.color}`}>
-                        {rapport.stats}
-                      </span>
-                      <span className="text-xs text-muted-foreground">Accéder →</span>
+                      <span className="text-sm font-semibold tabular-nums">{rapport.stats}</span>
+                      <span className="text-muted-foreground text-xs">Accéder</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -255,7 +244,6 @@ export default async function RapportsPage() {
           })}
         </div>
       </div>
-
       {/* Graphiques avancés */}
       <div className="grid gap-4 md:grid-cols-2">
         <TcoDepartementChart data={tcoChartData} />

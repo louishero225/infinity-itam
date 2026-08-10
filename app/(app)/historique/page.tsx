@@ -2,6 +2,8 @@ import type { Tables } from "@/lib/types/database";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/app/page-header";
+import { StatCard } from "@/components/app/stat-card";
 import { HistoriqueTable } from "@/components/app/historique/historique-table";
 
 type HistoriqueRow = Tables<"v_historique_attributions">;
@@ -102,46 +104,29 @@ export default async function HistoriquePage(props: {
     }
   });
 
+  const periodeLabel =
+    periodeFilter === "tout" ? "toutes périodes" : `dernières ${periodeFilter}`;
+
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold">Historique</h1>
-        <p className="text-muted-foreground text-sm">
-          Historique complet des attributions et restitutions avec filtres et pagination.
-        </p>
-      </div>
+      <PageHeader
+        title="Historique"
+        description="Historique complet des attributions et restitutions avec filtres et pagination."
+      />
 
-      {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground">Total opérations</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{stats.total}</div>
-            <p className="text-muted-foreground text-xs mt-1">
-              {periodeFilter === "tout" ? "toutes périodes" : `dernières ${periodeFilter}`}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground">Attributions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-600">{stats.attributions}</div>
-            <p className="text-muted-foreground text-xs mt-1">matériel attribué</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground">Restitutions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-600">{stats.restitutions}</div>
-            <p className="text-muted-foreground text-xs mt-1">matériel restitué</p>
-          </CardContent>
-        </Card>
+        <StatCard label="Total opérations" value={stats.total} hint={periodeLabel} />
+        <StatCard
+          label="Attributions"
+          value={stats.attributions}
+          hint="matériel attribué"
+          accent="success"
+        />
+        <StatCard
+          label="Restitutions"
+          value={stats.restitutions}
+          hint="matériel restitué"
+        />
       </div>
 
       {/* Filtres */}

@@ -101,6 +101,14 @@ export async function mergeEmployes(sourceId: string, targetId: string) {
           })
           .eq("id", attr.id);
         if (error) throw new Error(error.message);
+
+        if (attr.materiel_id) {
+          const { error: materielError } = await supabase
+            .from("materiels")
+            .update({ statut: "Stock" })
+            .eq("id", attr.materiel_id);
+          if (materielError) throw new Error(materielError.message);
+        }
         continue;
       }
     }

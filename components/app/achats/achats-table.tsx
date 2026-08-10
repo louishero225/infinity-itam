@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { Trash2, FileText, CheckCircle, XCircle } from "lucide-react";
+import { Trash2, CheckCircle } from "lucide-react";
 
 import { deleteDemandeAchat, changerStatutDemande } from "@/app/(app)/achats/actions";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { AlertDialogConfirm } from "@/components/ui/alert-dialog-confirm";
 import { DemandeAchatFormDialog } from "./demande-achat-form-dialog";
 import { useSortableRows } from "@/components/app/sortable-table-head";
 
@@ -44,6 +45,10 @@ type DemandeRow = {
 
 export function AchatsTable({ rows }: { rows: DemandeRow[] }) {
   const [loading, setLoading] = React.useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = React.useState<{
+    id: string;
+    numero: string;
+  } | null>(null);
 
   const sortAccessors = React.useMemo(
     () => ({
@@ -59,9 +64,7 @@ export function AchatsTable({ rows }: { rows: DemandeRow[] }) {
 
   const { sortedData, renderHead } = useSortableRows(rows, sortAccessors);
 
-  const handleDelete = async (id: string, numero: string) => {
-    if (!confirm(`Supprimer la demande "${numero}" ?`)) return;
-
+  const handleDelete = async (id: string) => {
     try {
       setLoading(id);
       await deleteDemandeAchat(id);
@@ -70,6 +73,7 @@ export function AchatsTable({ rows }: { rows: DemandeRow[] }) {
       toast.error(e instanceof Error ? e.message : "Erreur");
     } finally {
       setLoading(null);
+      setDeleteTarget(null);
     }
   };
 
@@ -224,12 +228,37 @@ export function AchatsTable({ rows }: { rows: DemandeRow[] }) {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     )}
-                    <DemandeAchatFormDialog mode="edit" initialValues={row as any} />
+                    <DemandeAchatFormDialog
+                      mode="edit"
+                      initialValues={
+                        row.id
+                          ? ({
+                              ...row,
+                              id: row.id,
+                              numero_demande: row.numero_demande ?? undefined,
+                              materiel_description: row.materiel_description ?? undefined,
+                              type_materiel: row.type_materiel ?? undefined,
+                              quantite: row.quantite?.toString(),
+                              montant_total: row.montant_total?.toString(),
+                              fournisseur: row.fournisseur ?? undefined,
+                              statut: row.statut ?? undefined,
+                              priorite: row.priorite ?? undefined,
+                              demandeur: row.demandeur ?? undefined,
+                              date_demande: row.date_demande ?? undefined,
+                              date_decaissement: row.date_decaissement ?? undefined,
+                              date_reception: row.date_reception ?? undefined,
+                              date_mise_production: row.date_mise_production ?? undefined,
+                            } as Parameters<typeof DemandeAchatFormDialog>[0]["initialValues"])
+                          : undefined
+                      }
+                    />
                     <Button
                       size="sm"
                       variant="ghost"
                       onClick={() =>
-                        row.id && row.numero_demande && handleDelete(row.id, row.numero_demande)
+                        row.id &&
+                        row.numero_demande &&
+                        setDeleteTarget({ id: row.id, numero: row.numero_demande })
                       }
                       disabled={loading === row.id || !!statutProtege}
                       title={statutProtege ? "Suppression impossible: demande approuvée ou décaissée" : undefined}
@@ -244,12 +273,27 @@ export function AchatsTable({ rows }: { rows: DemandeRow[] }) {
           {sortedData.length === 0 && (
             <TableRow>
               <TableCell colSpan={7} className="text-center text-muted-foreground">
-                Aucune demande d'achat
+                Aucune demande d&apos;achat
               </TableCell>
             </TableRow>
           )}
         </TableBody>
       </Table>
+      <AlertDialogConfirm
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        onConfirm={async () => {
+          if (deleteTarget) await handleDelete(deleteTarget.id);
+        }}
+        title="Supprimer cette demande ?"
+        description={
+          deleteTarget
+            ? `La demande « ${deleteTarget.numero} » sera définitivement supprimée.`
+            : ""
+        }
+        confirmText="Supprimer"
+        variant="destructive"
+      />
     </div>
   );
 }

@@ -36,7 +36,7 @@ export function LicencesUtilisationChart({ data }: LicencesUtilisationChartProps
       <CardHeader>
         <CardTitle className="text-base">Utilisation des licences</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Taux d'utilisation par licence
+          Taux d&apos;utilisation par licence
         </p>
       </CardHeader>
       <CardContent>
@@ -57,7 +57,7 @@ export function LicencesUtilisationChart({ data }: LicencesUtilisationChartProps
                 border: "1px solid #e5e7eb",
                 borderRadius: "6px",
               }}
-              formatter={(value: any, name: any) => {
+              formatter={(value: number | string | undefined, name: string | undefined) => {
                 if (name === "Taux") return `${value}%`;
                 return value;
               }}
@@ -69,7 +69,9 @@ export function LicencesUtilisationChart({ data }: LicencesUtilisationChartProps
               <LabelList
                 dataKey="taux"
                 position="right"
-                formatter={(value: any) => value ? `${Number(value).toFixed(0)}%` : ""}
+                formatter={(value) =>
+                  value != null && value !== false ? `${Number(value).toFixed(0)}%` : ""
+                }
                 fontSize={11}
               />
             </Bar>

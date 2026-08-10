@@ -4,10 +4,13 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { NextResponse } from "next/server";
 
+import { requireUser } from "@/lib/auth/require-user";
+
 const execFileAsync = promisify(execFile);
 
 export async function POST(request: Request) {
   try {
+    await requireUser();
     const form = await request.formData();
     const file = form.get("file");
     const execute = form.get("execute") === "true";
@@ -36,6 +39,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erreur import";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status = message === "Non authentifié" ? 401 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

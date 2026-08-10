@@ -1,13 +1,30 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireUserApi } from "@/lib/auth/require-user-api";
+type MaterielJoin = {
+  code_materiel: string | null;
+  type: string | null;
+  marque: string | null;
+  modele: string | null;
+  numero_serie: string | null;
+};
+
+type RestitutionWithMateriel = {
+  numero_attribution: string | null;
+  materiels: MaterielJoin | null;
+};
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ employe_id: string }> }
 ) {
   try {
-    const supabase = await createSupabaseServerClient();
+    const auth = await requireUserApi();
+    if (auth.response) return auth.response;
+
+    const supabase = auth.supabase;
     const { employe_id } = await params;
+    const { searchParams } = new URL(request.url);
+    const dateFilter = searchParams.get("date");
 
     // Récupérer les informations de l'employé
     const { data: employe, error: employeError } = await supabase
@@ -20,8 +37,8 @@ export async function GET(
       return new NextResponse("Employé non trouvé", { status: 404 });
     }
 
-    // Récupérer toutes les restitutions récentes de cet employé
-    const { data: restitutions, error: restitutionsError } = await supabase
+    // Récupérer les restitutions de cet employé (filtrables par date)
+    let restitutionsQuery = supabase
       .from("attributions")
       .select(`
         id,
@@ -42,7 +59,13 @@ export async function GET(
       .eq("statut", "Restitué")
       .not("date_restitution", "is", null)
       .order("date_restitution", { ascending: false })
-      .limit(20);
+      .limit(dateFilter ? 100 : 20);
+
+    if (dateFilter) {
+      restitutionsQuery = restitutionsQuery.eq("date_restitution", dateFilter);
+    }
+
+    const { data: restitutions, error: restitutionsError } = await restitutionsQuery;
 
     if (restitutionsError) {
       return new NextResponse("Erreur lors de la récupération des restitutions", {
@@ -66,8 +89,8 @@ export async function GET(
       .join(", ");
 
     // Formater les matériels
-    const materielsHTML = restitutions
-      .map((r: any) => {
+    const materielsHTML = (restitutions as unknown as RestitutionWithMateriel[])
+      .map((r) => {
         const mat = r.materiels;
         if (!mat) return "";
         

@@ -14,6 +14,7 @@ function normalizeStatut(value: string | null | undefined): Statut {
   if (value === "Attribué") return "Attribué";
   if (value === "Maintenance") return "Maintenance";
   if (value === "Transit") return "Transit";
+  if (value === "Disponible") return "Stock";
   return "Stock";
 }
 

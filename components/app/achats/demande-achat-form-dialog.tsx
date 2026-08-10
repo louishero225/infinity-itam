@@ -9,10 +9,10 @@ import { Upload, X } from "lucide-react";
 
 import { createDemandeAchat, updateDemandeAchat, genererNumeroDemandeAchat } from "@/app/(app)/achats/actions";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { FormDialogContent } from "@/components/app/form-dialog-content";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
@@ -222,7 +222,7 @@ export function DemandeAchatFormDialog({
           {mode === "edit" ? "Modifier" : "Nouvelle demande"}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto max-w-3xl">
+      <FormDialogContent size="lg">
         <DialogHeader>
           <DialogTitle>
             {mode === "edit" ? "Modifier demande d'achat" : "Nouvelle demande d'achat"}
@@ -492,7 +492,7 @@ export function DemandeAchatFormDialog({
                   <div className="flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-accent w-fit">
                     <Upload className="h-4 w-4" />
                     <span className="text-sm">
-                      {uploadingDevis ? "Upload en cours..." : "Choisir un fichier"}
+                      {uploadingDevis ? "Téléversement en cours..." : "Choisir un fichier"}
                     </span>
                   </div>
                   <input
@@ -514,7 +514,7 @@ export function DemandeAchatFormDialog({
                         } else {
                           toast.error("Erreur lors de l'upload");
                         }
-                      } catch (error) {
+                      } catch {
                         toast.error("Erreur lors de l'upload");
                       } finally {
                         setUploadingDevis(false);
@@ -562,7 +562,7 @@ export function DemandeAchatFormDialog({
             </DialogFooter>
           </form>
         </Form>
-      </DialogContent>
+      </FormDialogContent>
     </Dialog>
   );
 }

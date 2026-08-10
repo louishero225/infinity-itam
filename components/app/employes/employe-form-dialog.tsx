@@ -80,7 +80,7 @@ export function EmployeFormDialog() {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Nouvel employé</DialogTitle>
-          <DialogDescription>Ajoute un employé/utilisateur au référentiel.</DialogDescription>
+          <DialogDescription>Ajoutez un employé ou utilisateur au référentiel.</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>

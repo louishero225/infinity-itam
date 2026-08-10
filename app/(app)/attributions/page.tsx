@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+import { PageHeader } from "@/components/app/page-header";
 import { getEntites } from "@/app/(app)/entites/actions";
 import { AttributionFormDialog } from "@/components/app/attributions/attribution-form-dialog";
 import { AttributionsTable } from "@/components/app/attributions/attributions-table";
@@ -124,23 +125,20 @@ export default async function AttributionsPage(props: {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Attributions</h1>
-          <p className="text-muted-foreground text-sm">
-            Attribuer et restituer le matériel — employés ou entités.
-          </p>
-        </div>
-
-        <div className="flex gap-2">
-          <AttributionFormDialog
-            materiels={materiels ?? []}
-            employes={employes ?? []}
-            entites={entites}
-          />
-          <OnboardingDialog materiels={materiels ?? []} employes={employes ?? []} />
-        </div>
-      </div>
+      <PageHeader
+        title="Attributions"
+        description="Attribuer et restituer le matériel — employés ou entités."
+        actions={
+          <>
+            <AttributionFormDialog
+              materiels={materiels ?? []}
+              employes={employes ?? []}
+              entites={entites}
+            />
+            <OnboardingDialog materiels={materiels ?? []} employes={employes ?? []} />
+          </>
+        }
+      />
 
       <AttributionsStats
         total={stats.total}

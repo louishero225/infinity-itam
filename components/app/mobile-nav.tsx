@@ -3,6 +3,7 @@
 import * as React from "react";
 import { MenuIcon } from "lucide-react";
 
+import { LogoutButton } from "@/components/app/logout-button";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -30,6 +31,9 @@ export function MobileNav({ title }: { title: string }) {
           </div>
           <div className="px-3 pb-4">
             <SidebarNav />
+            <div className="mt-4 border-t pt-4">
+              <LogoutButton />
+            </div>
           </div>
         </SheetContent>
       </Sheet>

@@ -1,11 +1,17 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/types/database";
 
+import { PageHeader } from "@/components/app/page-header";
+import { StatCard } from "@/components/app/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ReparationsTable } from "@/components/app/reparations/reparations-table";
 import { ReparationFormDialog } from "@/components/app/reparations/reparation-form-dialog";
 
 type ReparationRow = Tables<"v_reparations_details">;
+
+function formatMoney(value: number) {
+  return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(value)} FCFA`;
+}
 
 export default async function ReparationsPage() {
   const supabase = await createSupabaseServerClient();
@@ -35,58 +41,22 @@ export default async function ReparationsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Réparations</h1>
-          <p className="text-muted-foreground text-sm">
-            Suivi des interventions et réparations sur le matériel.
-          </p>
-        </div>
-        <ReparationFormDialog />
-      </div>
+      <PageHeader
+        title="Réparations"
+        description="Suivi des interventions et réparations sur le matériel."
+        actions={<ReparationFormDialog />}
+      />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Total interventions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold">{stats.total}</div>
-            <p className="text-muted-foreground text-xs mt-1">réparations</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">En cours</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold text-blue-600">{stats.enCours}</div>
-            <p className="text-muted-foreground text-xs mt-1">actives</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Terminées</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold text-green-600">{stats.terminees}</div>
-            <p className="text-muted-foreground text-xs mt-1">finalisées</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Coût total</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold">
-              {new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(
-                stats.coutTotal
-              )}{" "}
-              FCFA
-            </div>
-            <p className="text-muted-foreground text-xs mt-1">dépenses</p>
-          </CardContent>
-        </Card>
+        <StatCard label="Total interventions" value={stats.total} hint="réparations" />
+        <StatCard label="En cours" value={stats.enCours} hint="actives" accent="warning" />
+        <StatCard label="Terminées" value={stats.terminees} hint="finalisées" accent="success" />
+        <StatCard
+          label="Coût total"
+          value={formatMoney(stats.coutTotal)}
+          hint="dépenses cumulées"
+          accent="muted"
+        />
       </div>
 
       <Card>

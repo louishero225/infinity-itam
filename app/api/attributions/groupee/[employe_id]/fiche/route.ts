@@ -1,12 +1,28 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireUserApi } from "@/lib/auth/require-user-api";
+
+type MaterielJoin = {
+  code_materiel: string | null;
+  type: string | null;
+  marque: string | null;
+  modele: string | null;
+  numero_serie: string | null;
+};
+
+type AttributionWithMateriel = {
+  numero_attribution: string | null;
+  materiels: MaterielJoin | null;
+};
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ employe_id: string }> }
 ) {
   try {
-    const supabase = await createSupabaseServerClient();
+    const auth = await requireUserApi();
+    if (auth.response) return auth.response;
+
+    const supabase = auth.supabase;
     const { employe_id } = await params;
 
     // Récupérer les informations de l'employé
@@ -62,8 +78,8 @@ export async function GET(
     const dateReception = new Date().toLocaleDateString("fr-FR");
 
     // Formater les matériels
-    const materielsHTML = attributions
-      .map((a: any, index: number) => {
+    const materielsHTML = (attributions as unknown as AttributionWithMateriel[])
+      .map((a) => {
         const mat = a.materiels;
         if (!mat) return "";
         

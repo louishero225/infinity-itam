@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { UserX, FileText } from "lucide-react";
+import { UserX } from "lucide-react";
 
 import { createRestitutionGroupee } from "@/app/(app)/attributions/restitution-groupee-actions";
 import { Button } from "@/components/ui/button";
@@ -68,7 +68,7 @@ export function RestitutionGroupeeDialog({
     },
   });
 
-  async function onSubmit(values: Values) {
+  async function onSubmit() {
     setShowConfirm(true);
   }
 
@@ -87,7 +87,10 @@ export function RestitutionGroupeeDialog({
       toast.success(`${result.count} matériel(s) restitué(s) avec succès`);
 
       // Ouvrir la fiche de restitution groupée
-      window.open(`/api/attributions/restitution-groupee/${employeId}`, "_blank");
+      window.open(
+        `/api/attributions/restitution-groupee/${employeId}?date=${encodeURIComponent(values.date_restitution)}`,
+        "_blank"
+      );
 
       form.reset();
       setOpen(false);

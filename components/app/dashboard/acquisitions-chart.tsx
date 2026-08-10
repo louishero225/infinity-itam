@@ -2,6 +2,12 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  chartAxisStroke,
+  chartColors,
+  chartGridStroke,
+  chartTooltipStyle,
+} from "@/lib/ui/chart-theme";
+import {
   LineChart,
   Line,
   XAxis,
@@ -39,33 +45,29 @@ export function AcquisitionsChart({ data }: AcquisitionsChartProps) {
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} />
             <XAxis
               dataKey="mois"
-              stroke="#6b7280"
+              stroke={chartAxisStroke}
               fontSize={12}
               tickLine={false}
             />
             <YAxis
               yAxisId="left"
-              stroke="#3b82f6"
+              stroke={chartColors.primary}
               fontSize={12}
               tickLine={false}
             />
             <YAxis
               yAxisId="right"
               orientation="right"
-              stroke="#10b981"
+              stroke={chartColors.secondary}
               fontSize={12}
               tickLine={false}
               tickFormatter={formatMoney}
             />
             <Tooltip
-              contentStyle={{
-                backgroundColor: "rgba(255, 255, 255, 0.95)",
-                border: "1px solid #e5e7eb",
-                borderRadius: "6px",
-              }}
+              contentStyle={chartTooltipStyle}
               formatter={(value: number | undefined, name: string | undefined) => {
                 if (!value) return ["0", name || ""];
                 if (name === "Valeur") return formatMoney(value);
@@ -77,18 +79,18 @@ export function AcquisitionsChart({ data }: AcquisitionsChartProps) {
               yAxisId="left"
               type="monotone"
               dataKey="count"
-              stroke="#3b82f6"
+              stroke={chartColors.primary}
               strokeWidth={2}
-              dot={{ fill: "#3b82f6", r: 4 }}
+              dot={{ fill: chartColors.primary, r: 4 }}
               name="Quantité"
             />
             <Line
               yAxisId="right"
               type="monotone"
               dataKey="valeur"
-              stroke="#10b981"
+              stroke={chartColors.secondary}
               strokeWidth={2}
-              dot={{ fill: "#10b981", r: 4 }}
+              dot={{ fill: chartColors.secondary, r: 4 }}
               name="Valeur"
             />
           </LineChart>

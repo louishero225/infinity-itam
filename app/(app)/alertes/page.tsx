@@ -1,8 +1,9 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/types/database";
 
+import { PageHeader } from "@/components/app/page-header";
+import { StatCard } from "@/components/app/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { AlertesTable } from "@/components/app/alertes/alertes-table";
 import { LicencesAlertesTable } from "@/components/app/alertes/licences-alertes-table";
 import { PaiementsAlertesTable } from "@/components/app/alertes/paiements-alertes-table";
@@ -23,12 +24,12 @@ export default async function AlertesPage(props: {
     .select("*")
     .returns<AlerteRow[]>();
 
-  const { data: licencesData, error: licencesError } = await supabase
+  const { data: licencesData } = await supabase
     .from("v_licences_alertes")
     .select("*")
     .order("jours_avant_expiration", { ascending: true });
 
-  const { data: paiementsData, error: paiementsError } = await supabase
+  const { data: paiementsData } = await supabase
     .from("v_licences_paiements_alertes")
     .select("*")
     .order("date_paiement_prevue", { ascending: true });
@@ -76,55 +77,21 @@ export default async function AlertesPage(props: {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold">Alertes</h1>
-        <p className="text-muted-foreground text-sm">
-          Gestion des alertes de maintenance, garanties et renouvellements.
-        </p>
-      </div>
+      <PageHeader
+        title="Alertes"
+        description="Maintenance, garanties, renouvellements de licences et paiements à traiter."
+      />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Total actives</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold">{stats.total}</div>
-            <p className="text-muted-foreground text-xs mt-1">alertes</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Critiques</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold text-red-600">{stats.critique}</div>
-            <p className="text-muted-foreground text-xs mt-1">priorité haute</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Échues</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold text-orange-600">{stats.echue}</div>
-            <p className="text-muted-foreground text-xs mt-1">en retard</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Urgentes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold text-yellow-600">{stats.urgente}</div>
-            <p className="text-muted-foreground text-xs mt-1">à traiter rapidement</p>
-          </CardContent>
-        </Card>
+        <StatCard label="Total actives" value={stats.total} hint="alertes matériel" />
+        <StatCard label="Critiques" value={stats.critique} hint="priorité haute" accent="danger" />
+        <StatCard label="Échues" value={stats.echue} hint="en retard" accent="warning" />
+        <StatCard label="Urgentes" value={stats.urgente} hint="à traiter rapidement" accent="warning" />
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Alertes Matériel</CardTitle>
+          <CardTitle className="text-sm">Alertes matériel</CardTitle>
         </CardHeader>
         <CardContent>
           <AlertesTable rows={filtered} />
@@ -133,42 +100,14 @@ export default async function AlertesPage(props: {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Alertes Licences - Renouvellements</CardTitle>
+          <CardTitle className="text-sm">Alertes licences — renouvellements</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="mb-4 grid gap-4 md:grid-cols-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs">Total</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-semibold">{licencesStats.total}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs">Expirées</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-semibold text-red-600">{licencesStats.expirees}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs">Critiques (&lt;7j)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-semibold text-orange-600">{licencesStats.critiques}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs">Urgentes (&lt;30j)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-semibold text-yellow-600">{licencesStats.urgentes}</div>
-              </CardContent>
-            </Card>
+            <StatCard label="Total" value={licencesStats.total} />
+            <StatCard label="Expirées" value={licencesStats.expirees} accent="danger" />
+            <StatCard label="Critiques (<7 j)" value={licencesStats.critiques} accent="warning" />
+            <StatCard label="Urgentes (<30 j)" value={licencesStats.urgentes} accent="warning" />
           </div>
           <LicencesAlertesTable rows={licencesAlertes} />
         </CardContent>
@@ -176,42 +115,14 @@ export default async function AlertesPage(props: {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Alertes Paiements - À régler</CardTitle>
+          <CardTitle className="text-sm">Alertes paiements — à régler</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="mb-4 grid gap-4 md:grid-cols-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs">Total</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-semibold">{paiementsStats.total}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs">Très en retard (&gt;7j)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-semibold text-red-600">{paiementsStats.tresEnRetard}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs">En retard</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-semibold text-orange-600">{paiementsStats.enRetard}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs">À payer bientôt (&lt;7j)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-semibold text-yellow-600">{paiementsStats.aPayerBientot}</div>
-              </CardContent>
-            </Card>
+            <StatCard label="Total" value={paiementsStats.total} />
+            <StatCard label="Très en retard (>7 j)" value={paiementsStats.tresEnRetard} accent="danger" />
+            <StatCard label="En retard" value={paiementsStats.enRetard} accent="warning" />
+            <StatCard label="À payer bientôt (<7 j)" value={paiementsStats.aPayerBientot} accent="warning" />
           </div>
           <PaiementsAlertesTable rows={paiementsAlertes} />
         </CardContent>

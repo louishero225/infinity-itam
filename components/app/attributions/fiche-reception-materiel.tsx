@@ -1,10 +1,11 @@
 "use client";
 
 import { useRef } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { FileText, Printer } from "lucide-react";
-import { getMaterielIcon } from "@/lib/utils/materiel-icons";
+import { MaterielIcon } from "@/lib/utils/materiel-icons";
 
 type FicheData = {
   attribution_id: string;
@@ -111,8 +112,12 @@ export function FicheReceptionMateriel({ data }: { data: FicheData }) {
                   padding-bottom: 6px;
                   border-bottom: 2px solid #e5e7eb;
                 }
-                .section-icon {
-                  font-size: 18px;
+                .section-icon:not(.section-icon-graphic) {
+                  width: 6px;
+                  height: 6px;
+                  border-radius: 1px;
+                  background: currentColor;
+                  flex-shrink: 0;
                 }
                 .info-grid {
                   display: grid;
@@ -262,7 +267,13 @@ export function FicheReceptionMateriel({ data }: { data: FicheData }) {
         <div ref={ficheRef} className="bg-white">
           <div className="page-header">
             <div className="logo-box">
-              <img src="/IAG 11 - Copie.jpg" alt="Logo entreprise" />
+              <Image
+                src="/IAG 11 - Copie.jpg"
+                alt="Logo entreprise"
+                width={120}
+                height={50}
+                className="max-h-full max-w-full object-contain"
+              />
             </div>
             <div className="title-box">
               <h1>FICHE DE RESTITUTION<br/>DE MATÉRIEL</h1>
@@ -282,7 +293,7 @@ export function FicheReceptionMateriel({ data }: { data: FicheData }) {
 
           <div className="section">
             <div className="section-header">
-              <span className="section-icon">📋</span>
+              <span className="section-icon" aria-hidden="true" />
               <span>RESTITUÉ PAR</span>
             </div>
             <div className="info-grid">
@@ -315,11 +326,8 @@ export function FicheReceptionMateriel({ data }: { data: FicheData }) {
 
           <div className="section">
             <div className="section-header">
-              <span className="section-icon">
-                {(() => {
-                  const Icon = getMaterielIcon(data.type_materiel);
-                  return <Icon className="h-5 w-5" />;
-                })()}
+              <span className="section-icon section-icon-graphic">
+                <MaterielIcon type={data.type_materiel} className="h-5 w-5" />
               </span>
               <span>MATÉRIEL RESTITUÉ</span>
             </div>
@@ -349,8 +357,8 @@ export function FicheReceptionMateriel({ data }: { data: FicheData }) {
 
           <div className="section">
             <div className="section-header">
-              <span className="section-icon">⚙</span>
-              <span>CONTRÔLE DE L'ÉTAT DU MATÉRIEL</span>
+              <span className="section-icon" aria-hidden="true" />
+              <span>CONTRÔLE DE L&apos;ÉTAT DU MATÉRIEL</span>
             </div>
             <div className="checklist">
               <div className="checklist-item">
@@ -428,7 +436,7 @@ export function FicheReceptionMateriel({ data }: { data: FicheData }) {
 
           <div className="section">
             <div className="section-header">
-              <span className="section-icon">📝</span>
+              <span className="section-icon" aria-hidden="true" />
               <span>OBSERVATIONS ET REMARQUES</span>
             </div>
             <div className="notes-box">
@@ -438,7 +446,7 @@ export function FicheReceptionMateriel({ data }: { data: FicheData }) {
 
           <div className="section">
             <div className="section-header">
-              <span className="section-icon">✓</span>
+              <span className="section-icon" aria-hidden="true" />
               <span>DÉCISION DU SERVICE IT</span>
             </div>
             {data.decision_it ? (

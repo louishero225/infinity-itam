@@ -3,7 +3,8 @@
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatCard } from "@/components/app/stat-card";
+import { cn } from "@/lib/utils";
 
 type StatsCardProps = {
   total: number;
@@ -46,30 +47,30 @@ export function MaterielsStats({ total, stock, attribues, maintenance, valeurTot
     {
       label: "Total",
       value: total,
-      description: "matériels",
+      hint: "matériels",
       statut: "all",
-      borderColor: "border-l-slate-500",
+      hintExtra:
+        valeurTotale != null && valeurTotale > 0 ? `Valeur : ${formatMoney(valeurTotale)}` : undefined,
     },
     {
       label: "Stock",
       value: stock,
-      description: "disponibles",
+      hint: "disponibles",
       statut: "Stock",
-      borderColor: "border-l-green-500",
+      accent: "success" as const,
     },
     {
       label: "Attribués",
       value: attribues,
-      description: "en utilisation",
+      hint: "en utilisation",
       statut: "Attribué",
-      borderColor: "border-l-blue-500",
     },
     {
       label: "Maintenance",
       value: maintenance,
-      description: "en réparation",
+      hint: "en réparation",
       statut: "Maintenance",
-      borderColor: "border-l-yellow-500",
+      accent: "muted" as const,
     },
   ];
 
@@ -78,26 +79,23 @@ export function MaterielsStats({ total, stock, attribues, maintenance, valeurTot
       {cards.map((card) => {
         const isActive = activeStatut === card.statut;
         return (
-          <Card
+          <button
             key={card.statut}
-            className={`cursor-pointer transition-all hover:shadow-md border-l-4 ${
-              card.borderColor
-            } ${isActive ? "ring-2 ring-primary shadow-md" : ""}`}
+            type="button"
             onClick={() => handleFilter(card.statut)}
+            className="text-left"
           >
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">{card.label}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-semibold">{card.value}</div>
-              <p className="text-muted-foreground text-xs mt-1">{card.description}</p>
-              {card.statut === "all" && valeurTotale != null && valeurTotale > 0 && (
-                <p className="text-muted-foreground text-xs mt-1 font-medium">
-                  Valeur: {formatMoney(valeurTotale)}
-                </p>
+            <StatCard
+              label={card.label}
+              value={card.value}
+              hint={card.hintExtra ?? card.hint}
+              accent={card.accent}
+              className={cn(
+                "w-full",
+                isActive && "ring-2 ring-primary/40 border-primary/30 shadow-md"
               )}
-            </CardContent>
-          </Card>
+            />
+          </button>
         );
       })}
     </div>

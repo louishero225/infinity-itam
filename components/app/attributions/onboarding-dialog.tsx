@@ -3,15 +3,14 @@
 import * as React from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 
 import { createOnboardingAttribution } from "@/app/(app)/attributions/actions";
+import { FormDialogContent } from "@/components/app/form-dialog-content";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
@@ -26,13 +25,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -65,9 +57,7 @@ export function OnboardingDialog({
   materiels: MaterielOption[];
 }) {
   const [open, setOpen] = React.useState(false);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [materielSearch, setMaterielSearch] = React.useState("");
-  const router = useRouter();
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -79,7 +69,7 @@ export function OnboardingDialog({
     },
   });
 
-  const selectedMaterielIds = form.watch("materiel_ids") || [];
+  const selectedMaterielIds = useWatch({ control: form.control, name: "materiel_ids" }) || [];
 
   const filteredMateriels = React.useMemo(() => {
     if (!materielSearch) return materiels;
@@ -94,7 +84,6 @@ export function OnboardingDialog({
   }, [materiels, materielSearch]);
 
   async function onSubmit(values: Values) {
-    setIsSubmitting(true);
     try {
       const result = await createOnboardingAttribution({
         employe_id: values.employe_id,
@@ -113,8 +102,6 @@ export function OnboardingDialog({
       setOpen(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur lors de l'attribution groupée");
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
@@ -135,9 +122,9 @@ export function OnboardingDialog({
             Attribution Groupée (Onboarding)
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <FormDialogContent size="lg">
           <DialogHeader>
-            <DialogTitle>Attribution Groupée - Kit d'Onboarding</DialogTitle>
+            <DialogTitle>Attribution Groupée - Kit d&apos;Onboarding</DialogTitle>
             <DialogDescription>
               Attribuez plusieurs matériels à un employé et générez une fiche de remise groupée
             </DialogDescription>
@@ -194,7 +181,7 @@ export function OnboardingDialog({
                         filteredMateriels.map((materiel) => (
                           <label
                             key={materiel.id}
-                            className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                            className="flex items-center space-x-3 p-2 hover:bg-accent/50 rounded cursor-pointer"
                           >
                             <Checkbox
                               checked={selectedMaterielIds.includes(materiel.id)}
@@ -229,7 +216,7 @@ export function OnboardingDialog({
                 name="date_attribution"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Date d'attribution *</FormLabel>
+                    <FormLabel>Date d&apos;attribution *</FormLabel>
                     <FormControl>
                       <input
                         type="date"
@@ -270,7 +257,7 @@ export function OnboardingDialog({
               </DialogFooter>
             </form>
           </Form>
-        </DialogContent>
+        </FormDialogContent>
       </Dialog>
     </>
   );

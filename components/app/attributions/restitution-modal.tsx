@@ -8,10 +8,10 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 import { restituerAttribution } from "@/app/(app)/attributions/actions";
+import { FormDialogContent, FormSection } from "@/components/app/form-dialog-content";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
@@ -28,7 +28,39 @@ import {
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { FicheReceptionMateriel } from "./fiche-reception-materiel";
+
+const DECISION_OPTIONS = [
+  {
+    value: "bon_etat",
+    label: "Matériel accepté — Bon état (prêt pour réattribution)",
+  },
+  {
+    value: "avec_reserves",
+    label: "Accepté avec réserves (voir remarques ci-dessus)",
+  },
+  {
+    value: "reparation",
+    label: "Nécessite réparation avant réattribution",
+  },
+  {
+    value: "reformer",
+    label: "Matériel à réformer (hors service)",
+  },
+] as const;
+
+const CHECKLIST_FIELDS = [
+  { name: "appareil_complet" as const, label: "Appareil complet et fonctionnel" },
+  { name: "ecran_intact" as const, label: "Écran intact sans rayures" },
+  { name: "clavier_souris" as const, label: "Clavier/Souris fonctionnels" },
+  { name: "boitier_intact" as const, label: "Boîtier/Coque sans dommages" },
+  { name: "cables_presents" as const, label: "Câbles et chargeur présents" },
+  { name: "accessoires_complets" as const, label: "Accessoires complets" },
+  { name: "donnees_effacees" as const, label: "Données effacées/formaté" },
+  { name: "aucun_logiciel" as const, label: "Aucun logiciel personnel installé" },
+];
 
 const schema = z.object({
   etat_restitution: z.string().min(1, "Veuillez sélectionner un état"),
@@ -176,133 +208,37 @@ export function RestitutionModal({
             Restituer
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <FormDialogContent size="md">
           <DialogHeader>
             <DialogTitle>Restitution de matériel</DialogTitle>
             <DialogDescription>
-              Vérifiez l'état du matériel avant de valider la restitution.
+              Vérifiez l&apos;état du matériel avant de valider la restitution.
             </DialogDescription>
           </DialogHeader>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="space-y-3">
-                <h3 className="font-semibold text-sm">Contrôle de l'état du matériel</h3>
-                <div className="grid grid-cols-2 gap-3 p-4 bg-blue-50 rounded-md border border-blue-200">
-                  <FormField
-                    control={form.control}
-                    name="appareil_complet"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center space-x-2 space-y-0">
-                        <FormControl>
-                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                        <FormLabel className="text-xs font-normal cursor-pointer">
-                          Appareil complet et fonctionnel
-                        </FormLabel>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="ecran_intact"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center space-x-2 space-y-0">
-                        <FormControl>
-                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                        <FormLabel className="text-xs font-normal cursor-pointer">
-                          Écran intact sans rayures
-                        </FormLabel>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="clavier_souris"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center space-x-2 space-y-0">
-                        <FormControl>
-                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                        <FormLabel className="text-xs font-normal cursor-pointer">
-                          Clavier/Souris fonctionnels
-                        </FormLabel>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="boitier_intact"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center space-x-2 space-y-0">
-                        <FormControl>
-                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                        <FormLabel className="text-xs font-normal cursor-pointer">
-                          Boîtier/Coque sans dommages
-                        </FormLabel>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="cables_presents"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center space-x-2 space-y-0">
-                        <FormControl>
-                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                        <FormLabel className="text-xs font-normal cursor-pointer">
-                          Câbles et chargeur présents
-                        </FormLabel>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="accessoires_complets"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center space-x-2 space-y-0">
-                        <FormControl>
-                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                        <FormLabel className="text-xs font-normal cursor-pointer">
-                          Accessoires complets
-                        </FormLabel>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="donnees_effacees"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center space-x-2 space-y-0">
-                        <FormControl>
-                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                        <FormLabel className="text-xs font-normal cursor-pointer">
-                          Données effacées/formaté
-                        </FormLabel>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="aucun_logiciel"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center space-x-2 space-y-0">
-                        <FormControl>
-                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                        <FormLabel className="text-xs font-normal cursor-pointer">
-                          Aucun logiciel personnel installé
-                        </FormLabel>
-                      </FormItem>
-                    )}
-                  />
+            <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
+              <FormSection title="Contrôle de l'état du matériel">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-lg border bg-muted/40 p-4">
+                  {CHECKLIST_FIELDS.map(({ name, label }) => (
+                    <FormField
+                      key={name}
+                      control={form.control}
+                      name={name}
+                      render={({ field }) => (
+                        <FormItem className="flex items-center space-x-2 space-y-0">
+                          <FormControl>
+                            <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                          </FormControl>
+                          <FormLabel className="text-xs font-normal cursor-pointer">
+                            {label}
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                  ))}
                 </div>
-              </div>
+              </FormSection>
 
               <FormField
                 control={form.control}
@@ -339,65 +275,51 @@ export function RestitutionModal({
                 )}
               />
 
-              <div className="space-y-3">
-                <h3 className="font-semibold text-sm">Décision du Service IT *</h3>
+              <FormSection title="Décision du Service IT *">
                 <FormField
                   control={form.control}
                   name="decision_it"
                   render={({ field }) => (
-                    <FormItem className="space-y-3">
+                    <FormItem>
                       <FormControl>
-                        <div className="space-y-2">
-                          <label className="flex items-center space-x-3 cursor-pointer p-3 rounded-md hover:bg-gray-50 border border-gray-200">
-                            <input
-                              type="radio"
-                              value="bon_etat"
-                              checked={field.value === "bon_etat"}
-                              onChange={() => field.onChange("bon_etat")}
-                              className="w-4 h-4 text-blue-600"
-                            />
-                            <span className="text-sm">Matériel accepté - Bon état (prêt pour réattribution)</span>
-                          </label>
-                          <label className="flex items-center space-x-3 cursor-pointer p-3 rounded-md hover:bg-gray-50 border border-gray-200">
-                            <input
-                              type="radio"
-                              value="avec_reserves"
-                              checked={field.value === "avec_reserves"}
-                              onChange={() => field.onChange("avec_reserves")}
-                              className="w-4 h-4 text-blue-600"
-                            />
-                            <span className="text-sm">Accepté avec réserves (voir remarques ci-dessus)</span>
-                          </label>
-                          <label className="flex items-center space-x-3 cursor-pointer p-3 rounded-md hover:bg-gray-50 border border-gray-200">
-                            <input
-                              type="radio"
-                              value="reparation"
-                              checked={field.value === "reparation"}
-                              onChange={() => field.onChange("reparation")}
-                              className="w-4 h-4 text-blue-600"
-                            />
-                            <span className="text-sm">Nécessite réparation avant réattribution</span>
-                          </label>
-                          <label className="flex items-center space-x-3 cursor-pointer p-3 rounded-md hover:bg-gray-50 border border-gray-200">
-                            <input
-                              type="radio"
-                              value="reformer"
-                              checked={field.value === "reformer"}
-                              onChange={() => field.onChange("reformer")}
-                              className="w-4 h-4 text-blue-600"
-                            />
-                            <span className="text-sm">Matériel à réformer (hors service)</span>
-                          </label>
-                        </div>
+                        <RadioGroup
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          className="gap-2"
+                        >
+                          {DECISION_OPTIONS.map((option) => (
+                            <div
+                              key={option.value}
+                              className="flex items-start gap-3 rounded-md border p-3 hover:bg-accent/50"
+                            >
+                              <RadioGroupItem
+                                value={option.value}
+                                id={`decision-${option.value}`}
+                                className="mt-0.5"
+                              />
+                              <Label
+                                htmlFor={`decision-${option.value}`}
+                                className="text-sm font-normal cursor-pointer leading-snug"
+                              >
+                                {option.label}
+                              </Label>
+                            </div>
+                          ))}
+                        </RadioGroup>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
+              </FormSection>
 
               <DialogFooter>
-                <Button variant="outline" onClick={() => setOpen(false)} disabled={isSubmitting}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setOpen(false)}
+                  disabled={isSubmitting}
+                >
                   Annuler
                 </Button>
                 <Button type="submit" disabled={isSubmitting}>
@@ -406,18 +328,18 @@ export function RestitutionModal({
               </DialogFooter>
             </form>
           </Form>
-        </DialogContent>
+        </FormDialogContent>
       </Dialog>
 
       {/* Fiche de réception après restitution */}
       {showFiche && ficheData && (
         <Dialog open={showFiche} onOpenChange={setShowFiche}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <FormDialogContent size="xl">
             <DialogHeader>
               <DialogTitle>Fiche de Réception - Restitution validée</DialogTitle>
             </DialogHeader>
             <FicheReceptionMateriel data={ficheData} />
-          </DialogContent>
+          </FormDialogContent>
         </Dialog>
       )}
     </>

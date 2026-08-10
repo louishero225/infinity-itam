@@ -3,6 +3,7 @@ import type { Tables } from "@/lib/types/database";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getEntitesWithMaterielCount } from "@/app/(app)/entites/actions";
 
+import { PageHeader } from "@/components/app/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmployeFormDialog } from "@/components/app/employes/employe-form-dialog";
 import { EmployesTable } from "@/components/app/employes/employes-table";
@@ -67,31 +68,27 @@ export default async function DestinatairesPage(props: {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Destinataires</h1>
-          <p className="text-muted-foreground text-sm">
-            Personnes et entités pouvant recevoir du matériel.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {tab === "personnes" ? (
+      <PageHeader
+        title="Destinataires"
+        description="Personnes et entités pouvant recevoir du matériel."
+        actions={
+          tab === "personnes" ? (
             <>
               <EmployeFormDialog />
               <OnboardingDialog materiels={materiels} employes={employesOptions} />
             </>
           ) : (
             <EntiteFormDialog />
-          )}
-        </div>
-      </div>
+          )
+        }
+      />
 
       <div className="flex gap-2 border-b pb-2">
         <Button variant={tab !== "entites" ? "default" : "outline"} size="sm" asChild>
-          <Link href="/destinataires?tab=personnes">👤 Personnes ({employes.length})</Link>
+          <Link href="/destinataires?tab=personnes">Personnes ({employes.length})</Link>
         </Button>
         <Button variant={tab === "entites" ? "default" : "outline"} size="sm" asChild>
-          <Link href="/destinataires?tab=entites">🏢 Entités ({entites.length})</Link>
+          <Link href="/destinataires?tab=entites">Entités ({entites.length})</Link>
         </Button>
       </div>
 
