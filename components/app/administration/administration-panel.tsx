@@ -9,6 +9,7 @@ import {
   Bell,
   RefreshCw,
   FileSpreadsheet,
+  Shield,
 } from "lucide-react";
 
 import {
@@ -18,9 +19,11 @@ import {
   exportParcCompletCsv,
   generateGarantieAlertes,
 } from "@/app/(app)/administration/actions";
+import type { AdminUserRow } from "@/app/(app)/administration/users-actions";
 import { mergeEmployes } from "@/app/(app)/employes/actions";
 import type { EmployeDuplicateGroup } from "@/lib/utils/employe-matching";
 import { employeDisplayName } from "@/lib/utils/employe-matching";
+import { UsersRolesPanel } from "@/components/app/administration/users-roles-panel";
 import { AlertDialogConfirm } from "@/components/ui/alert-dialog-confirm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,9 +51,21 @@ function download(filename: string, content: string) {
 
 type Props = {
   duplicateGroups: EmployeDuplicateGroup[];
+  users: AdminUserRow[];
+  currentUserId: string;
+  currentUserEmail: string | null;
+  hasServiceRole: boolean;
+  iAmRegistered: boolean;
 };
 
-export function AdministrationPanel({ duplicateGroups }: Props) {
+export function AdministrationPanel({
+  duplicateGroups,
+  users,
+  currentUserId,
+  currentUserEmail,
+  hasServiceRole,
+  iAmRegistered,
+}: Props) {
   const [importing, setImporting] = React.useState(false);
   const [dryRunResult, setDryRunResult] = React.useState<string | null>(null);
   const [mergeTargets, setMergeTargets] = React.useState<Record<string, string>>({});
@@ -117,12 +132,26 @@ export function AdministrationPanel({ duplicateGroups }: Props) {
 
   return (
     <>
-      <Tabs defaultValue="export">
+      <Tabs defaultValue="users">
         <TabsList>
+          <TabsTrigger value="users">
+            <Shield className="mr-1.5 size-3.5" />
+            Utilisateurs
+          </TabsTrigger>
           <TabsTrigger value="export">Exports</TabsTrigger>
           <TabsTrigger value="import">Import Excel</TabsTrigger>
           <TabsTrigger value="maintenance">Maintenance ITAM</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="users" className="mt-4">
+          <UsersRolesPanel
+            users={users}
+            currentUserId={currentUserId}
+            currentUserEmail={currentUserEmail}
+            hasServiceRole={hasServiceRole}
+            iAmRegistered={iAmRegistered}
+          />
+        </TabsContent>
 
         <TabsContent value="export" className="mt-4">
           <Card>

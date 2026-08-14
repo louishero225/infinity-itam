@@ -32,6 +32,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { PackagePlus, Search } from "lucide-react";
 import { Combobox } from "@/components/ui/combobox";
+import { useAccess } from "@/components/app/access-provider";
 
 const schema = z.object({
   employe_id: z.string().min(1, "Veuillez sélectionner un employé"),
@@ -64,6 +65,7 @@ export function OnboardingDialog({
   const [showFiche, setShowFiche] = React.useState(false);
   const [ficheData, setFicheData] = React.useState<FicheGroupeeData | null>(null);
   const [materielSearch, setMaterielSearch] = React.useState("");
+  const { canWrite } = useAccess();
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -131,6 +133,8 @@ export function OnboardingDialog({
       : [...current, materielId];
     form.setValue("materiel_ids", updated);
   };
+
+  if (!canWrite) return null;
 
   return (
     <>

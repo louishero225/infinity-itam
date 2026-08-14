@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireWrite } from "@/lib/auth/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function createLicence(input: {
@@ -22,6 +23,7 @@ export async function createLicence(input: {
   statut?: "Active" | "Expirée" | "En attente" | "Résiliée";
   is_active?: boolean;
 }) {
+  await requireWrite();
   const supabase = await createSupabaseServerClient();
 
   const { error } = await supabase.from("licences").insert({
@@ -70,6 +72,7 @@ export async function updateLicence(input: {
   statut?: "Active" | "Expirée" | "En attente" | "Résiliée";
   is_active?: boolean;
 }) {
+  await requireWrite();
   const supabase = await createSupabaseServerClient();
 
   const { error } = await supabase
@@ -102,6 +105,7 @@ export async function updateLicence(input: {
 }
 
 export async function deleteLicence(id: string) {
+  await requireWrite();
   const supabase = await createSupabaseServerClient();
 
   const { error } = await supabase.from("licences").delete().eq("id", id);

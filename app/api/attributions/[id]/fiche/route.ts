@@ -1,4 +1,5 @@
 import { requireUserApi } from "@/lib/auth/require-user-api";
+import { rateLimit } from "@/lib/server/rate-limit";
 import { NextResponse } from "next/server";
 
 export async function GET(
@@ -7,6 +8,11 @@ export async function GET(
 ) {
   const auth = await requireUserApi();
   if (auth.response) return auth.response;
+
+  const limited = rateLimit(`fiche:${auth.user.id}`, 40);
+  if (!limited.ok) {
+    return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 });
+  }
 
   const { id } = await params;
   const supabase = auth.supabase;

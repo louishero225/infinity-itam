@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { requireWrite } from "@/lib/auth/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { entiteCodeFromNom, type BeneficiaireType } from "@/lib/utils/beneficiaire";
 
@@ -35,6 +36,7 @@ export async function createEntite(input: {
   type: BeneficiaireType;
   code?: string;
 }) {
+  await requireWrite();
   const supabase = await createSupabaseServerClient();
   const code = (input.code?.trim() || entiteCodeFromNom(input.nom)).toUpperCase();
 

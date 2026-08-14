@@ -15,6 +15,7 @@ import { MATERIEL_TYPES, codePrefixForType } from "@/lib/utils/materiel-taxonomy
 import Image from "next/image";
 import { Upload, X } from "lucide-react";
 import { FormDialogContent } from "@/components/app/form-dialog-content";
+import { useAccess } from "@/components/app/access-provider";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -55,7 +56,16 @@ const schema = z
     modele: z.string().optional(),
     numero_serie: z.string().optional(),
     site: z.string().optional(),
-    statut: z.enum(["Stock", "Attribué", "Maintenance", "Transit"]),
+    statut: z.enum([
+      "Stock",
+      "Attribué",
+      "Maintenance",
+      "Transit",
+      "Réformé",
+      "Cédé",
+      "Volé",
+      "Perdu",
+    ]),
     etat: z.enum(["Neuf", "Bon", "Moyen", "À réparer", "Hors service"]),
     beneficiaire_type: z.enum(["employe", "departement", "societe"]).optional(),
     employe_id: z.string().optional(),
@@ -107,6 +117,7 @@ export function MaterielFormDialog({
   triggerVariant?: "default" | "secondary" | "destructive" | "outline" | "ghost" | "link";
 }) {
   const [open, setOpen] = React.useState(false);
+  const { canWrite } = useAccess();
   const [employes, setEmployes] = React.useState<EmployeOption[]>([]);
   const [entites, setEntites] = React.useState<EntiteRow[]>([]);
   const [loadingEmployes, setLoadingEmployes] = React.useState(false);
@@ -381,6 +392,8 @@ export function MaterielFormDialog({
     }
   }
 
+  if (!canWrite) return null;
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -579,6 +592,10 @@ export function MaterielFormDialog({
                         <SelectItem value="Attribué">Attribué</SelectItem>
                         <SelectItem value="Maintenance">Maintenance</SelectItem>
                         <SelectItem value="Transit">Transit</SelectItem>
+                        <SelectItem value="Réformé">Réformé</SelectItem>
+                        <SelectItem value="Cédé">Cédé</SelectItem>
+                        <SelectItem value="Volé">Volé</SelectItem>
+                        <SelectItem value="Perdu">Perdu</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

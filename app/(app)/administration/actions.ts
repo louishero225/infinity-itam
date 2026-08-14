@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { requireAdmin } from "@/lib/auth/roles";
 import { exportAttributionsCsv, exportMaterielsCsv } from "@/app/(app)/rapports/actions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -22,6 +23,7 @@ function toCsv(rows: Record<string, unknown>[]) {
 }
 
 export async function exportEmployesCsv() {
+  await requireAdmin();
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("employes")
@@ -32,6 +34,7 @@ export async function exportEmployesCsv() {
 }
 
 export async function exportParcCompletCsv() {
+  await requireAdmin();
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("materiels")
@@ -80,6 +83,7 @@ export async function exportParcCompletCsv() {
 }
 
 export async function generateGarantieAlertes() {
+  await requireAdmin();
   const supabase = await createSupabaseServerClient();
   const today = new Date();
   const horizon = new Date(today);

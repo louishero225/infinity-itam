@@ -14,9 +14,11 @@ import {
   Users,
   Settings,
   Wrench,
+  ScrollText,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useAccess } from "@/components/app/access-provider";
 import { AlertesBadge } from "./alertes-badge";
 
 const navItems = [
@@ -30,15 +32,19 @@ const navItems = [
   { href: "/reparations", label: "Réparations", icon: Wrench },
   { href: "/historique", label: "Historique", icon: History },
   { href: "/rapports", label: "Rapports", icon: Package },
-  { href: "/administration", label: "Administration", icon: Settings },
+  { href: "/audit", label: "Journal d'audit", icon: ScrollText, admin: true },
+  { href: "/administration", label: "Administration", icon: Settings, admin: true },
 ];
 
 export function SidebarNav({ className }: { className?: string }) {
   const pathname = usePathname();
+  const { canAdmin } = useAccess();
 
   return (
     <nav className={cn("flex flex-col gap-1", className)}>
-      {navItems.map((item) => {
+      {navItems
+        .filter((item) => !("admin" in item && item.admin) || canAdmin)
+        .map((item) => {
         const active = pathname === item.href || pathname?.startsWith(item.href + "/");
         const Icon = item.icon;
 

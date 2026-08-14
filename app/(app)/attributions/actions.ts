@@ -22,6 +22,10 @@ import { restituerAttributionWithFallback } from "@/lib/server/restitution-trans
 
 import type { BeneficiaireType } from "@/lib/utils/beneficiaire";
 
+import { requireWrite } from "@/lib/auth/roles";
+
+import { logAudit } from "@/lib/server/audit";
+
 
 
 export async function createAttribution(input: {
@@ -40,7 +44,13 @@ export async function createAttribution(input: {
 
   commentaire?: string | null;
 
+  type_attribution?: "standard" | "pret";
+
+  date_retour_prevue?: string | null;
+
 }) {
+
+  await requireWrite();
 
   const supabase = await createSupabaseServerClient();
 
@@ -82,6 +92,23 @@ export async function createAttribution(input: {
 
   });
 
+  if (input.type_attribution === "pret" || input.date_retour_prevue) {
+    await supabase
+      .from("attributions")
+      .update({
+        type_attribution: input.type_attribution ?? "pret",
+        date_retour_prevue: input.date_retour_prevue ?? null,
+      })
+      .eq("id", attributionId);
+  }
+
+  await logAudit({
+    action: "create_attribution",
+    entityType: "attribution",
+    entityId: attributionId,
+    details: { materiel_id: input.materiel_id, type: input.type_attribution ?? "standard" },
+  });
+
 
 
   revalidatePath("/attributions");
@@ -112,11 +139,20 @@ export async function restituerAttribution(input: {
 
 }) {
 
+  await requireWrite();
+
   const supabase = await createSupabaseServerClient();
 
 
 
   await restituerAttributionWithFallback(supabase, input);
+
+  await logAudit({
+    action: "restitution",
+    entityType: "attribution",
+    entityId: input.attribution_id,
+    details: { materiel_id: input.materiel_id },
+  });
 
 
 
@@ -143,6 +179,8 @@ export async function createOnboardingAttribution(input: {
   commentaire?: string | null;
 
 }) {
+
+  await requireWrite();
 
   const supabase = await createSupabaseServerClient();
 

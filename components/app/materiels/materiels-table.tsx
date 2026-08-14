@@ -6,17 +6,13 @@ import { DataTable } from "@/components/app/data-table";
 import { MaterielFormDialog } from "@/components/app/materiels/materiel-form-dialog";
 import { Badge } from "@/components/ui/badge";
 import { MaterielIcon } from "@/lib/utils/materiel-icons";
+import {
+  normalizeMaterielStatut,
+  STATUT_BADGE_CLASS,
+  STATUT_DOT_CLASS,
+} from "@/lib/materiel/statuts";
 
-type Statut = "Stock" | "Attribué" | "Maintenance" | "Transit";
 type Etat = "Neuf" | "Bon" | "Moyen" | "À réparer" | "Hors service";
-
-function normalizeStatut(value: string | null | undefined): Statut {
-  if (value === "Attribué") return "Attribué";
-  if (value === "Maintenance") return "Maintenance";
-  if (value === "Transit") return "Transit";
-  if (value === "Disponible") return "Stock";
-  return "Stock";
-}
 
 function normalizeEtat(value: string | null | undefined): Etat {
   if (value === "Neuf") return "Neuf";
@@ -98,22 +94,10 @@ export function MaterielsTable({ rows }: { rows: MaterielRow[] }) {
           key: "statut",
           header: "Statut",
           cell: (r) => {
-            const statut = r.statut ?? "Stock";
-            const colors: Record<string, string> = {
-              Stock: "bg-green-100 text-green-800 border-green-300 hover:bg-green-100",
-              "Attribué": "bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-100",
-              Maintenance: "bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-100",
-              Transit: "bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-100",
-            };
-            const dots: Record<string, string> = {
-              Stock: "bg-green-500",
-              "Attribué": "bg-blue-500",
-              Maintenance: "bg-yellow-500",
-              Transit: "bg-gray-500",
-            };
+            const statut = normalizeMaterielStatut(r.statut);
             return (
-              <Badge className={colors[statut] || colors.Transit}>
-                <span className={`h-2 w-2 rounded-full ${dots[statut] || dots.Transit}`} />
+              <Badge className={STATUT_BADGE_CLASS[statut] || STATUT_BADGE_CLASS.Transit}>
+                <span className={`h-2 w-2 rounded-full ${STATUT_DOT_CLASS[statut] || STATUT_DOT_CLASS.Transit}`} />
                 {statut}
               </Badge>
             );
@@ -138,7 +122,7 @@ export function MaterielsTable({ rows }: { rows: MaterielRow[] }) {
                 marque: r.marque ?? undefined,
                 modele: r.modele ?? undefined,
                 numero_serie: r.numero_serie ?? undefined,
-                statut: normalizeStatut(r.statut),
+                statut: normalizeMaterielStatut(r.statut),
                 etat: normalizeEtat(r.etat),
                 site: r.site ?? undefined,
                 date_achat: r.date_achat ?? undefined,

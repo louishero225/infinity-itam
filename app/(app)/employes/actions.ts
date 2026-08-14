@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
+import { requireAdmin, requireWrite } from "@/lib/auth/roles";
+import { logAudit } from "@/lib/server/audit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   employeDisplayName,
@@ -32,6 +34,7 @@ export async function createEmploye(input: {
   matricule?: string | null;
   statut?: string | null;
 }) {
+  await requireWrite();
   const supabase = await createSupabaseServerClient();
 
   const { error } = await supabase.from("employes").insert({
@@ -54,10 +57,17 @@ export async function createEmploye(input: {
     throw new Error(error.message);
   }
 
+  await logAudit({
+    action: "create_employe",
+    entityType: "employe",
+    details: { nom: `${input.prenom} ${input.nom}` },
+  });
+
   revalidatePath("/employes");
 }
 
 export async function mergeEmployes(sourceId: string, targetId: string) {
+  await requireAdmin();
   if (sourceId === targetId) {
     throw new Error("Impossible de fusionner un employé avec lui-même.");
   }
@@ -122,6 +132,13 @@ export async function mergeEmployes(sourceId: string, targetId: string) {
 
   const { error: deleteError } = await supabase.from("employes").delete().eq("id", sourceId);
   if (deleteError) throw new Error(deleteError.message);
+
+  await logAudit({
+    action: "merge_employes",
+    entityType: "employe",
+    entityId: targetId,
+    details: { sourceId },
+  });
 
   revalidatePath("/employes");
   revalidatePath("/attributions");

@@ -1,7 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireWrite } from "@/lib/auth/roles";
+import { logAudit } from "@/lib/server/audit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  codePrefixForType,
+  codeSearchPatternsForPrefix,
+  computeNextMaterielCode,
+  normalizeMaterielCode,
+  normalizeMaterielType,
+} from "@/lib/utils/materiel-taxonomy";
 
 export async function genererNumeroDemandeAchat(): Promise<string> {
   const supabase = await createSupabaseServerClient();
@@ -58,6 +67,7 @@ export async function createDemandeAchat(input: {
   date_demande: string;
   notes?: string;
 }) {
+  await requireWrite();
   const supabase = await createSupabaseServerClient();
 
   const { error } = await supabase.from("demandes_achat").insert({
@@ -105,6 +115,7 @@ export async function updateDemandeAchat(input: {
   materiel_id?: string;
   notes?: string;
 }) {
+  await requireWrite();
   const supabase = await createSupabaseServerClient();
 
   const { error } = await supabase
@@ -139,6 +150,7 @@ export async function updateDemandeAchat(input: {
 }
 
 export async function deleteDemandeAchat(id: string) {
+  await requireWrite();
   const supabase = await createSupabaseServerClient();
 
   const { error } = await supabase.from("demandes_achat").delete().eq("id", id);
@@ -149,6 +161,7 @@ export async function deleteDemandeAchat(id: string) {
 }
 
 export async function changerStatutDemande(id: string, nouveauStatut: string) {
+  await requireWrite();
   const supabase = await createSupabaseServerClient();
 
   const updates: {
@@ -177,17 +190,24 @@ export async function changerStatutDemande(id: string, nouveauStatut: string) {
       .single();
 
     if (demande && !demande.materiel_id) {
-      // Générer un code matériel unique
-      const prefix = demande.type_materiel?.substring(0, 3).toUpperCase() || "MAT";
-      const timestamp = Date.now().toString().slice(-6);
-      const codeMateriel = `${prefix}-${timestamp}`;
+      const type = normalizeMaterielType(demande.type_materiel || "Autre");
+      const prefix = codePrefixForType(type);
+      const patterns = codeSearchPatternsForPrefix(prefix);
+      const orFilter = patterns.map((p) => `code_materiel.ilike.${p}`).join(",");
+      const { data: existing } = await supabase
+        .from("materiels")
+        .select("code_materiel")
+        .or(orFilter);
+      const codeMateriel = computeNextMaterielCode(
+        (existing ?? []).map((row) => normalizeMaterielCode(row.code_materiel)),
+        prefix
+      );
 
-      // Créer le matériel
       const { data: nouveauMateriel, error: materielError } = await supabase
         .from("materiels")
         .insert({
           code_materiel: codeMateriel,
-          type: demande.type_materiel || "Autre",
+          type,
           statut: "Stock",
           date_achat: demande.date_reception || today,
           cout: demande.montant_total,
@@ -202,6 +222,12 @@ export async function changerStatutDemande(id: string, nouveauStatut: string) {
 
       if (nouveauMateriel) {
         updates.materiel_id = nouveauMateriel.id;
+        await logAudit({
+          action: "achat_reception_materiel",
+          entityType: "materiel",
+          entityId: nouveauMateriel.id,
+          details: { demande: demande.numero_demande, code: codeMateriel },
+        });
       }
     }
   } else if (nouveauStatut === "En production") {

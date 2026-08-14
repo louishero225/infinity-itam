@@ -8,10 +8,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmployeFormDialog } from "@/components/app/employes/employe-form-dialog";
 import { EmployesTable } from "@/components/app/employes/employes-table";
 import { OnboardingDialog } from "@/components/app/attributions/onboarding-dialog";
+import { TablePagination } from "@/components/app/table-pagination";
+import { Suspense } from "react";
 
 type EmployeWithAttributions = Tables<"employes"> & {
   attributions?: { id: string; statut: string | null }[];
 };
+
+const PAGE_SIZE = 25;
+
+function parsePage(value: string | string[] | undefined) {
+  const raw = typeof value === "string" ? Number.parseInt(value, 10) : 1;
+  return Number.isFinite(raw) && raw > 0 ? raw : 1;
+}
 
 export default async function EmployesPage(props: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -20,6 +29,7 @@ export default async function EmployesPage(props: {
   const supabase = await createSupabaseServerClient();
 
   const departementFilter = typeof searchParams?.departement === "string" ? searchParams.departement : null;
+  const page = parsePage(searchParams?.page);
 
   const [employesResult, materielsResult] = await Promise.all([
     supabase
@@ -61,6 +71,8 @@ export default async function EmployesPage(props: {
     departementFilter && departementFilter !== "all"
       ? allEmployes.filter((e) => e.departement === departementFilter)
       : allEmployes;
+
+  const pagedRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const deptCounts = allEmployes.reduce(
     (acc, e) => {
@@ -152,7 +164,10 @@ export default async function EmployesPage(props: {
           <CardTitle className="text-sm">Liste des employés</CardTitle>
         </CardHeader>
         <CardContent>
-          <EmployesTable rows={rows} />
+          <EmployesTable rows={pagedRows} />
+          <Suspense fallback={null}>
+            <TablePagination page={page} pageSize={PAGE_SIZE} totalCount={rows.length} />
+          </Suspense>
         </CardContent>
       </Card>
     </div>

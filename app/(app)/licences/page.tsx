@@ -5,6 +5,8 @@ import { StatCard } from "@/components/app/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LicencesTable } from "@/components/app/licences/licences-table";
 import { LicenceFormDialog } from "@/components/app/licences/licence-form-dialog";
+import { TablePagination } from "@/components/app/table-pagination";
+import { Suspense } from "react";
 
 function formatMoney(value: number) {
   return new Intl.NumberFormat("fr-FR", {
@@ -14,7 +16,14 @@ function formatMoney(value: number) {
   }).format(value);
 }
 
-export default async function LicencesPage() {
+const PAGE_SIZE = 25;
+
+export default async function LicencesPage(props: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const searchParams = await props.searchParams;
+  const pageRaw = typeof searchParams?.page === "string" ? Number.parseInt(searchParams.page, 10) : 1;
+  const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1;
   const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
@@ -35,6 +44,7 @@ export default async function LicencesPage() {
   }
 
   const licences = data ?? [];
+  const paged = licences.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const stats = {
     total: licences.length,
@@ -83,7 +93,10 @@ export default async function LicencesPage() {
           <CardTitle className="text-sm">Liste des licences</CardTitle>
         </CardHeader>
         <CardContent>
-          <LicencesTable rows={licences} />
+          <LicencesTable rows={paged} />
+          <Suspense fallback={null}>
+            <TablePagination page={page} pageSize={PAGE_SIZE} totalCount={licences.length} />
+          </Suspense>
         </CardContent>
       </Card>
     </div>

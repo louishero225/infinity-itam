@@ -37,6 +37,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { EntiteSelect } from "@/components/app/beneficiaire/entite-select";
+import { useAccess } from "@/components/app/access-provider";
 import type { EntiteRow } from "@/app/(app)/entites/actions";
 
 type MaterielOption = { id: string; code_materiel: string; type: string; marque: string | null; modele: string | null };
@@ -68,6 +69,8 @@ const schema = z
     beneficiaire_label: z.string().optional(),
     date_attribution: z.string().min(1),
     commentaire: z.string().optional(),
+    type_attribution: z.enum(["standard", "pret"]),
+    date_retour_prevue: z.string().optional(),
   })
   .superRefine((values, ctx) => {
     if (values.beneficiaire_type === "employe" && !values.employe_id) {
@@ -83,6 +86,14 @@ const schema = z
         code: z.ZodIssueCode.custom,
         path: ["entite_id"],
         message: "Veuillez sélectionner une entité.",
+      });
+    }
+
+    if (values.type_attribution === "pret" && !values.date_retour_prevue) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["date_retour_prevue"],
+        message: "Indiquez la date de retour prévue.",
       });
     }
   });
@@ -102,16 +113,19 @@ export function AttributionFormDialog({
   const [showFiche, setShowFiche] = React.useState(false);
   const [ficheData, setFicheData] = React.useState<FicheData | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const { canWrite } = useAccess();
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: {
       beneficiaire_type: "employe",
       date_attribution: new Date().toISOString().slice(0, 10),
+      type_attribution: "standard",
     },
   });
 
   const beneficiaireType = form.watch("beneficiaire_type");
+  const typeAttribution = form.watch("type_attribution");
 
   const materielOptions: ComboboxOption[] = React.useMemo(
     () =>
@@ -145,6 +159,8 @@ export function AttributionFormDialog({
           values.beneficiaire_type !== "employe" ? values.beneficiaire_label || null : null,
         date_attribution: values.date_attribution,
         commentaire: values.commentaire || null,
+        type_attribution: values.type_attribution,
+        date_retour_prevue: values.type_attribution === "pret" ? values.date_retour_prevue || null : null,
       });
 
       toast.success("Attribution enregistrée");
@@ -170,6 +186,8 @@ export function AttributionFormDialog({
       setIsSubmitting(false);
     }
   }
+
+  if (!canWrite) return null;
 
   return (
     <>
@@ -294,6 +312,44 @@ export function AttributionFormDialog({
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="type_attribution"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Type</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="standard">Attribution standard</SelectItem>
+                      <SelectItem value="pret">Prêt temporaire</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {typeAttribution === "pret" ? (
+              <FormField
+                control={form.control}
+                name="date_retour_prevue"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Retour prévu</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : null}
 
             <FormField
               control={form.control}

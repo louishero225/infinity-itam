@@ -3,6 +3,8 @@
 import { DataTable } from "@/components/app/data-table";
 import { RestitutionModal } from "@/components/app/attributions/restitution-modal";
 import { FichesButtons } from "@/components/app/attributions/fiches-buttons";
+import { FicheOnboardingButton } from "@/components/app/attributions/fiche-onboarding-button";
+import { Badge } from "@/components/ui/badge";
 import {
   BeneficiaireBadge,
   beneficiaireSearchText,
@@ -14,6 +16,8 @@ type AttributionRow = {
   id: string;
   date_attribution: string;
   statut: string | null;
+  type_attribution?: string | null;
+  date_retour_prevue?: string | null;
   beneficiaire_type?: string | null;
   beneficiaire_label?: string | null;
   materiel: { id: string; code_materiel: string; type: string } | null;
@@ -71,14 +75,28 @@ export function AttributionsTable({ rows }: { rows: AttributionRow[] }) {
         {
           key: "statut",
           header: "Statut",
-          cell: (r) => r.statut ?? "—",
+          cell: (r) => (
+            <div className="flex flex-col gap-1">
+              <span>{r.statut ?? "—"}</span>
+              {r.type_attribution === "pret" ? (
+                <Badge variant="secondary">
+                  Prêt{r.date_retour_prevue ? ` · ${r.date_retour_prevue}` : ""}
+                </Badge>
+              ) : null}
+            </div>
+          ),
           sortValue: (r) => r.statut ?? "",
         },
         {
           key: "fiches",
           header: "Fiches",
           sortable: false,
-          cell: (r) => <FichesButtons attributionId={r.id} />,
+          cell: (r) => (
+            <div className="flex flex-wrap items-center gap-2">
+              <FichesButtons attributionId={r.id} />
+              {r.employe ? <FicheOnboardingButton employeId={r.employe.id} label="Kit" /> : null}
+            </div>
+          ),
         },
         {
           key: "actions",

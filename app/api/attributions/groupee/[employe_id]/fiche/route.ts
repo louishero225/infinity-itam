@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUserApi } from "@/lib/auth/require-user-api";
+import { rateLimit } from "@/lib/server/rate-limit";
 
 type MaterielJoin = {
   code_materiel: string | null;
@@ -31,6 +32,11 @@ export async function GET(
   try {
     const auth = await requireUserApi();
     if (auth.response) return auth.response;
+
+    const limited = rateLimit(`fiche-groupee:${auth.user.id}`, 20);
+    if (!limited.ok) {
+      return new NextResponse("Trop de requêtes", { status: 429 });
+    }
 
     const supabase = auth.supabase;
     const { employe_id } = await params;

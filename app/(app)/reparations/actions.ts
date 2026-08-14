@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireWrite } from "@/lib/auth/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function createReparation(input: {
@@ -18,6 +19,7 @@ export async function createReparation(input: {
   diagnostique?: string;
   resolution?: string;
 }) {
+  await requireWrite();
   const supabase = await createSupabaseServerClient();
 
   const { error } = await supabase.from("reparations").insert({
@@ -58,6 +60,7 @@ export async function updateReparation(input: {
   diagnostique?: string;
   resolution?: string;
 }) {
+  await requireWrite();
   const supabase = await createSupabaseServerClient();
 
   const { error } = await supabase
@@ -86,6 +89,7 @@ export async function updateReparation(input: {
 }
 
 export async function deleteReparation(id: string) {
+  await requireWrite();
   const supabase = await createSupabaseServerClient();
 
   const { error } = await supabase.from("reparations").delete().eq("id", id);

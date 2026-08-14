@@ -13,6 +13,8 @@ type AttributionRow = {
   id: string;
   date_attribution: string;
   statut: string | null;
+  type_attribution: string | null;
+  date_retour_prevue: string | null;
   beneficiaire_type: string | null;
   beneficiaire_label: string | null;
   materiel: { id: string; code_materiel: string; type: string } | null;
@@ -41,7 +43,7 @@ export default async function AttributionsPage(props: {
       supabase
         .from("attributions")
         .select(
-          `id, date_attribution, statut,
+          `id, date_attribution, statut, type_attribution, date_retour_prevue,
            beneficiaire_type, beneficiaire_label,
            materiel:materiel_id (id, code_materiel, type),
            employe:employe_id (id, prenom, nom, departement),

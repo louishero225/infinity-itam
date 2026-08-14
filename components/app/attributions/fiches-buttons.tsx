@@ -66,6 +66,12 @@ export function FichesButtons({ attributionId }: { attributionId: string }) {
     <div className="flex gap-2">
       <FicheRemiseMateriel data={data} />
       <FicheReceptionMateriel data={data} />
+      <a
+        href={`/api/attributions/${attributionId}/pdf`}
+        className="text-muted-foreground hover:text-foreground inline-flex items-center text-xs underline"
+      >
+        PDF
+      </a>
     </div>
   );
 }

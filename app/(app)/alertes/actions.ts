@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireWrite } from "@/lib/auth/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function traiterAlerte(alerteId: string) {
+  await requireWrite();
   const supabase = await createSupabaseServerClient();
 
   const { error } = await supabase
@@ -21,6 +23,7 @@ export async function traiterAlerte(alerteId: string) {
 }
 
 export async function ignorerAlerte(alerteId: string) {
+  await requireWrite();
   const supabase = await createSupabaseServerClient();
 
   const { error } = await supabase

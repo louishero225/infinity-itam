@@ -4,6 +4,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/app/page-header";
+import { PiecesJointesCard } from "@/components/app/pieces-jointes-card";
+import { listPiecesJointes } from "@/app/(app)/fichiers/actions";
 import {
   Table,
   TableBody,
@@ -87,6 +89,8 @@ export default async function MaterielDetailPage({
         .returns<AttributionRow[]>(),
     ]);
 
+  const pieces = await listPiecesJointes("materiel", id);
+
   if (matError) {
     return (
       <div className="flex flex-col gap-2">
@@ -119,6 +123,7 @@ export default async function MaterielDetailPage({
         backLabel="Retour au matériel"
       />
 
+      <div className="grid gap-4 lg:grid-cols-[1fr_220px]">
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">Fiche matériel</CardTitle>
@@ -162,6 +167,21 @@ export default async function MaterielDetailPage({
           </div>
         </CardContent>
       </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">QR code</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`/api/materiels/${materiel.id}/qr`}
+            alt={`QR ${materiel.code_materiel}`}
+            className="w-full max-w-[180px] rounded-md border bg-white p-2"
+          />
+          <p className="text-muted-foreground mt-2 text-xs">{materiel.code_materiel}</p>
+        </CardContent>
+      </Card>
+      </div>
 
       <Card>
         <CardHeader>
@@ -242,6 +262,8 @@ export default async function MaterielDetailPage({
           </CardContent>
         </Card>
       ) : null}
+
+      <PiecesJointesCard entityType="materiel" entityId={materiel.id} pieces={pieces} />
     </div>
   );
 }

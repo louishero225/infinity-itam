@@ -79,6 +79,8 @@ export type Database = {
           materiel_id: string | null
           numero_attribution: string | null
           statut: string | null
+          date_retour_prevue: string | null
+          type_attribution: string | null
         }
         Insert: {
           accessoires?: string | null
@@ -96,6 +98,8 @@ export type Database = {
           materiel_id?: string | null
           numero_attribution?: string | null
           statut?: string | null
+          date_retour_prevue?: string | null
+          type_attribution?: string | null
         }
         Update: {
           accessoires?: string | null
@@ -112,6 +116,8 @@ export type Database = {
           id?: string
           materiel_id?: string | null
           statut?: string | null
+          date_retour_prevue?: string | null
+          type_attribution?: string | null
         }
         Relationships: []
       }
@@ -520,6 +526,75 @@ export type Database = {
         Update: {
           code?: string
           id?: number
+        }
+        Relationships: []
+      }
+      audit_log: {
+        Row: {
+          id: string
+          created_at: string
+          user_id: string | null
+          user_email: string | null
+          action: string
+          entity_type: string | null
+          entity_id: string | null
+          details: Json | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          user_id?: string | null
+          user_email?: string | null
+          action: string
+          entity_type?: string | null
+          entity_id?: string | null
+          details?: Json | null
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          user_id?: string | null
+          user_email?: string | null
+          action?: string
+          entity_type?: string | null
+          entity_id?: string | null
+          details?: Json | null
+        }
+        Relationships: []
+      }
+      pieces_jointes: {
+        Row: {
+          id: string
+          created_at: string
+          created_by: string | null
+          entity_type: string
+          entity_id: string
+          nom_fichier: string
+          mime_type: string | null
+          taille_octets: number | null
+          storage_path: string
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          created_by?: string | null
+          entity_type: string
+          entity_id: string
+          nom_fichier: string
+          mime_type?: string | null
+          taille_octets?: number | null
+          storage_path: string
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          created_by?: string | null
+          entity_type?: string
+          entity_id?: string
+          nom_fichier?: string
+          mime_type?: string | null
+          taille_octets?: number | null
+          storage_path?: string
         }
         Relationships: []
       }

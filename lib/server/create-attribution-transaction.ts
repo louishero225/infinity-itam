@@ -78,7 +78,15 @@ export async function assertMaterielAvailableForAttribution(
     );
   }
 
-  const unavailableStatuts = new Set(["Maintenance", "Transit", "Hors service"]);
+  const unavailableStatuts = new Set([
+    "Maintenance",
+    "Transit",
+    "Hors service",
+    "Réformé",
+    "Cédé",
+    "Volé",
+    "Perdu",
+  ]);
   if (materiel.statut && unavailableStatuts.has(materiel.statut)) {
     throw new Error(
       `Le matériel ${materiel.code_materiel ?? materielId} n'est pas disponible (statut : ${materiel.statut}).`

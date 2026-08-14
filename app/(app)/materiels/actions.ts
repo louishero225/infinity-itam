@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
+import { requireWrite } from "@/lib/auth/roles";
+import { logAudit } from "@/lib/server/audit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   resolveAttributionBeneficiaire,
@@ -61,6 +63,7 @@ export async function createMateriel(input: {
   beneficiaire_label?: string | null;
   date_attribution?: string | null;
 }) {
+  await requireWrite();
   const supabase = await createSupabaseServerClient();
 
   const statut = input.statut ?? "Stock";
@@ -111,6 +114,13 @@ export async function createMateriel(input: {
     }
     throw new Error(insertError.message);
   }
+
+  await logAudit({
+    action: "create_materiel",
+    entityType: "materiel",
+    entityId: materiel.id,
+    details: { code: code_materiel },
+  });
 
   if (willAttribute) {
     const date_attribution =
@@ -169,6 +179,7 @@ export async function updateMateriel(input: {
   beneficiaire_label?: string | null;
   date_attribution?: string | null;
 }) {
+  await requireWrite();
   const supabase = await createSupabaseServerClient();
 
   const statut = input.statut ?? "Stock";
