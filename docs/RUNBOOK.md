@@ -16,7 +16,28 @@
 - `20260812_05` : rôles, journal d'audit, prêts, pièces jointes, bucket Storage `itam-fichiers`.
 - `20260812_06` : policies RLS lecture/écriture sur `comptes_systeme` / `comptes_roles`.
 
+- `20260819_07` : module ITSM (tickets, commentaires, faits marquants, demandeurs).
+
 Sans `20260812_05`, l'app reste utilisable : audit, prêts et pièces jointes se dégradent silencieusement.
+Sans `20260819_07`, la section **ITSM — Tickets** (`/itsm`) est indisponible.
+
+## ITSM (Support IT)
+
+Page **ITSM — Tickets** (`/itsm`) :
+- création manuelle + détail ticket (commentaires, pièces jointes, timeline audit)
+- import CSV ManageEngine (dédup par Request ID)
+- modèle onboarding (7 tickets)
+- faits marquants du jour
+- SLA : saisie manuelle = retard auto après **30 jours** ; import CSV = colonne `Is Overdue`
+
+Pour migrer depuis l'ancien projet HTML (`iag-support-it`), exporter les tables Supabase `tickets`, `faits_marquants`, `demandeurs` et les importer dans le Supabase ITAM après la migration 07.
+
+Script automatique (ancien projet `mcdoybrdszdcczwzrexb`) :
+
+```bash
+npm run migrate:itsm          # simulation
+npm run migrate:itsm:execute  # import réel
+```
 
 ## Rôles (via le web)
 

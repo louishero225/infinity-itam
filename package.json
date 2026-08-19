@@ -14,7 +14,9 @@
     "normalize:nomenclature": "node scripts/normalize-nomenclature.mjs",
     "normalize:nomenclature:execute": "node scripts/normalize-nomenclature.mjs --execute",
     "migrate:entites": "node scripts/migrate-entites.mjs",
-    "migrate:entites:execute": "node scripts/migrate-entites.mjs --execute"
+    "migrate:entites:execute": "node scripts/migrate-entites.mjs --execute",
+    "migrate:itsm": "node scripts/migrate-itsm-data.mjs",
+    "migrate:itsm:execute": "node scripts/migrate-itsm-data.mjs --execute"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

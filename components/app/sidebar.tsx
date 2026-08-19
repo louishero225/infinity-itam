@@ -15,6 +15,7 @@ import {
   Settings,
   Wrench,
   ScrollText,
+  Ticket,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -32,6 +33,7 @@ const navItems = [
   { href: "/reparations", label: "Réparations", icon: Wrench },
   { href: "/historique", label: "Historique", icon: History },
   { href: "/rapports", label: "Rapports", icon: Package },
+  { href: "/itsm", label: "ITSM — Tickets", icon: Ticket },
   { href: "/audit", label: "Journal d'audit", icon: ScrollText, admin: true },
   { href: "/administration", label: "Administration", icon: Settings, admin: true },
 ];
