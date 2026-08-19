@@ -24,18 +24,19 @@ import {
   createTicketFromForm,
   getFaitsMarquantsToday,
   getItsmStats,
-  listDemandeurs,
+  listEmployesForItsm,
   listTickets,
 } from "./actions";
+import { employeDisplayName } from "@/lib/utils/employe-matching";
 
 export default async function ItsTmPage() {
   const access = await getAccess().catch(() => null);
   if (!access) redirect("/dashboard");
 
-  const [tickets, stats, demandeurs, faits] = await Promise.all([
+  const [tickets, stats, employes, faits] = await Promise.all([
     listTickets().catch(() => []),
     getItsmStats().catch(() => ({ total: 0, ouverts: 0, enRetard: 0, resolus: 0 })),
-    listDemandeurs().catch(() => []),
+    listEmployesForItsm().catch(() => []),
     getFaitsMarquantsToday().catch(() => ""),
   ]);
 
@@ -63,7 +64,7 @@ export default async function ItsTmPage() {
         <StatCard label="Résolus / fermés" value={stats.resolus} hint="clôturés" accent="muted" />
       </div>
 
-      <ItsmToolsPanel canWrite={access.canWrite} initialFaits={faits} />
+      <ItsmToolsPanel canWrite={access.canWrite} initialFaits={faits} employes={employes} />
 
       <Card>
         <CardHeader>
@@ -90,19 +91,29 @@ export default async function ItsTmPage() {
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="demandeur">Demandeur</Label>
+                <Label htmlFor="employe_id">Demandeur (employé ITAM)</Label>
+                <select
+                  id="employe_id"
+                  name="employe_id"
+                  defaultValue=""
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="">— Sélectionner un employé —</option>
+                  {employes.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {employeDisplayName(e.prenom, e.nom)}
+                      {e.departement ? ` · ${e.departement}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="demandeur">Ou saisie libre (si absent de la liste)</Label>
                 <Input
                   id="demandeur"
                   name="demandeur"
-                  list="demandeurs-list"
-                  placeholder="Nom du demandeur"
-                  required
+                  placeholder="Nom si non listé ci-dessus"
                 />
-                <datalist id="demandeurs-list">
-                  {demandeurs.map((d) => (
-                    <option key={d} value={d} />
-                  ))}
-                </datalist>
               </div>
 
               <div className="space-y-2">

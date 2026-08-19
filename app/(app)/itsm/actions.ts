@@ -7,17 +7,15 @@ import { requireWrite } from "@/lib/auth/roles";
 import { logAudit } from "@/lib/server/audit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { listPiecesJointes } from "@/app/(app)/fichiers/actions";
-import {
-  DEFAULT_TECHNICIAN,
-  ONBOARDING_STEPS,
-} from "@/lib/itsm/constants";
+import { DEFAULT_TECHNICIAN, ONBOARDING_STEPS } from "@/lib/itsm/constants";
 import { parseManageEngineCsv } from "@/lib/itsm/manageengine-import";
+import { matchEmployeFromLabel } from "@/lib/itsm/person-matching";
 import {
   computeEnRetardSaisie,
-  nowTimeStr,
   pad2,
   toIsoOrNull,
 } from "@/lib/itsm/sla";
+import { employeDisplayName } from "@/lib/utils/employe-matching";
 
 export type IitsmTicket = {
   id: string;
@@ -38,17 +36,129 @@ export type IitsmTicket = {
   en_retard: boolean;
   resolved_at: string | null;
   description: string | null;
+  employe_id: string | null;
   created_at: string;
   updated_at: string;
 };
 
-async function ensureDemandeur(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, name: string) {
+async function ensureDemandeur(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  name: string,
+  employeId?: string | null
+) {
   const clean = name.trim();
   if (!clean) return;
   await supabase.from("demandeurs").upsert(
-    { name: clean, source: "saisie" },
+    { name: clean, source: "saisie", employe_id: employeId ?? null },
     { onConflict: "name" }
   );
+}
+
+export async function listEmployesForItsm() {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("employes")
+    .select("id, prenom, nom, departement, site, statut")
+    .order("nom")
+    .order("prenom");
+
+  if (error) throw new Error(error.message);
+  return (data ?? []).filter((e) => (e.statut ?? "Actif") === "Actif");
+}
+
+/** Rapproche demandeurs + tickets ITSM avec les employés ITAM. */
+export async function syncPersonnesWithEmployes() {
+  await requireWrite();
+  const supabase = await createSupabaseServerClient();
+
+  const employes = await listEmployesForItsm();
+  if (employes.length === 0) {
+    throw new Error("Aucun employé actif en base ITAM.");
+  }
+
+  // Annuaire demandeurs ← employés (nom canonique)
+  for (const e of employes) {
+    const name = employeDisplayName(e.prenom, e.nom);
+    await supabase.from("demandeurs").upsert(
+      { name, source: "itam", employe_id: e.id },
+      { onConflict: "name" }
+    );
+  }
+
+  const { data: demandeurs } = await supabase.from("demandeurs").select("name, employe_id");
+  const { data: tickets } = await supabase.from("tickets").select("id, demandeur, employe_id");
+
+  let demandeursMatched = 0;
+  let ticketsUpdated = 0;
+  const unmatched: string[] = [];
+
+  for (const d of demandeurs ?? []) {
+    if (d.employe_id) continue;
+    const match = matchEmployeFromLabel(d.name, employes);
+    if (!match) {
+      unmatched.push(d.name);
+      continue;
+    }
+    await supabase
+      .from("demandeurs")
+      .update({ name: match.canonical, employe_id: match.id, source: "itam" })
+      .eq("name", d.name);
+    demandeursMatched++;
+  }
+
+  for (const t of tickets ?? []) {
+    const match = matchEmployeFromLabel(t.demandeur, employes);
+    if (!match) continue;
+    if (t.employe_id === match.id && t.demandeur === match.canonical) continue;
+    await supabase
+      .from("tickets")
+      .update({ demandeur: match.canonical, employe_id: match.id })
+      .eq("id", t.id);
+    ticketsUpdated++;
+  }
+
+  await logAudit({
+    action: "itsm.personnes.sync",
+    entityType: "demandeurs",
+    details: {
+      employes: employes.length,
+      demandeursMatched,
+      ticketsUpdated,
+      unmatched: unmatched.slice(0, 20),
+    },
+  });
+
+  revalidatePath("/itsm");
+  return {
+    employes: employes.length,
+    demandeursMatched,
+    ticketsUpdated,
+    unmatchedCount: unmatched.length,
+    unmatchedSample: unmatched.slice(0, 10),
+  };
+}
+
+function resolveDemandeurInput(formData: FormData, employes: Awaited<ReturnType<typeof listEmployesForItsm>>) {
+  const employeId = String(formData.get("employe_id") ?? "").trim();
+  let demandeur = String(formData.get("demandeur") ?? "").trim();
+
+  if (employeId) {
+    const emp = employes.find((e) => e.id === employeId);
+    if (emp) {
+      return { demandeur: employeDisplayName(emp.prenom, emp.nom), employe_id: emp.id };
+    }
+  }
+
+  if (!demandeur) {
+    throw new Error("Sélectionnez un employé ou saisissez un demandeur.");
+  }
+
+  const match = matchEmployeFromLabel(demandeur, employes);
+  if (match) {
+    return { demandeur: match.canonical, employe_id: match.id };
+  }
+
+  return { demandeur, employe_id: null as string | null };
 }
 
 export async function listDemandeurs() {
@@ -163,10 +273,11 @@ export async function getTicketDetail(ticketId: string) {
 export async function createTicketFromForm(formData: FormData) {
   const access = await requireWrite();
   const supabase = await createSupabaseServerClient();
+  const employes = await listEmployesForItsm();
 
   const date = String(formData.get("date") ?? "");
   const heure_creation = String(formData.get("heure_creation") ?? "");
-  const demandeur = String(formData.get("demandeur") ?? "").trim();
+  const { demandeur, employe_id } = resolveDemandeurInput(formData, employes);
   const entite = String(formData.get("entite") ?? "").trim();
   const categorie = String(formData.get("categorie") ?? "").trim();
   const canal = String(formData.get("canal") ?? "").trim();
@@ -177,8 +288,8 @@ export async function createTicketFromForm(formData: FormData) {
   const resolved_at_str = String(formData.get("resolved_at") ?? "").trim() || null;
   const description = String(formData.get("description") ?? "").trim() || null;
 
-  if (!date || !heure_creation || !demandeur) {
-    throw new Error("Date, heure et demandeur sont obligatoires.");
+  if (!date || !heure_creation) {
+    throw new Error("Date et heure sont obligatoires.");
   }
 
   const resolvedIso = toIsoOrNull(resolved_at_str);
@@ -197,6 +308,7 @@ export async function createTicketFromForm(formData: FormData) {
       date,
       heure_creation,
       demandeur,
+      employe_id,
       entite: entite || "Siège / Accueil",
       categorie: categorie || "Non catégorisé",
       canal: canal || "Verbal",
@@ -215,7 +327,7 @@ export async function createTicketFromForm(formData: FormData) {
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Insertion impossible.");
 
-  await ensureDemandeur(supabase, demandeur);
+  await ensureDemandeur(supabase, demandeur, employe_id);
 
   await logAudit({
     action: "ticket.create",
@@ -342,9 +454,13 @@ export async function importManageEngineCsv(formData: FormData) {
   if (error) throw new Error(error.message);
 
   const demandeurs = [...new Set(toInsert.map((t) => t.demandeur).filter(Boolean))];
+  const employes = await listEmployesForItsm();
   for (const d of demandeurs) {
-    await ensureDemandeur(supabase, d);
+    const match = matchEmployeFromLabel(d, employes);
+    await ensureDemandeur(supabase, match?.canonical ?? d, match?.id ?? null);
   }
+
+  await syncPersonnesWithEmployes();
 
   await logAudit({
     action: "ticket.import.csv",
@@ -369,6 +485,11 @@ export async function generateOnboardingTickets(formData: FormData) {
     throw new Error("Nom et date de début obligatoires.");
   }
 
+  const employes = await listEmployesForItsm();
+  const match = matchEmployeFromLabel(nom, employes);
+  const demandeur = match?.canonical ?? nom;
+  const employe_id = match?.id ?? null;
+
   const tickets = ONBOARDING_STEPS.map((step) => {
     const d = new Date(`${startDate}T00:00:00`);
     d.setDate(d.getDate() + step.offsetDays);
@@ -385,7 +506,8 @@ export async function generateOnboardingTickets(formData: FormData) {
       approx_time: false,
       date: dateStr,
       heure_creation: step.heure,
-      demandeur: nom,
+      demandeur,
+      employe_id,
       entite,
       categorie: step.categorie,
       canal: "Verbal",
@@ -403,7 +525,7 @@ export async function generateOnboardingTickets(formData: FormData) {
   const { error } = await supabase.from("tickets").insert(tickets);
   if (error) throw new Error(error.message);
 
-  await ensureDemandeur(supabase, nom);
+  await ensureDemandeur(supabase, demandeur, employe_id);
 
   await logAudit({
     action: "ticket.onboarding.generate",
@@ -423,5 +545,3 @@ async function getAccessSafe() {
     return null;
   }
 }
-
-export { nowTimeStr, todayDateStr } from "@/lib/itsm/sla";
