@@ -20,6 +20,16 @@ function MicrosoftLogo({ className }: { className?: string }) {
   );
 }
 
+function isNextRedirectError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    typeof (error as { digest?: unknown }).digest === "string" &&
+    String((error as { digest: string }).digest).startsWith("NEXT_REDIRECT")
+  );
+}
+
 export function LoginForm() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") ?? "/dashboard";
@@ -37,9 +47,16 @@ export function LoginForm() {
     setIsSubmitting(true);
     setError(null);
     formData.set("redirectTo", redirectTo);
-    const result = await signIn(formData);
-    if (result?.error) {
-      setError(result.error);
+    try {
+      const result = await signIn(formData);
+      if (result?.error) {
+        setError(result.error);
+        setIsSubmitting(false);
+      }
+    } catch (e) {
+      // redirect() côté server action : laisser Next.js poursuivre la navigation
+      if (isNextRedirectError(e)) throw e;
+      setError("Connexion impossible (réseau ou session). Réessayez.");
       setIsSubmitting(false);
     }
   }

@@ -13,11 +13,18 @@ export async function signIn(formData: FormData) {
     return { error: "Email et mot de passe requis." };
   }
 
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
 
-  if (error) {
-    return { error: "Identifiants invalides." };
+    if (error) {
+      return { error: "Identifiants invalides." };
+    }
+  } catch {
+    return {
+      error:
+        "Impossible de joindre le serveur d'authentification. Vérifiez votre connexion puis réessayez.",
+    };
   }
 
   redirect(safeRedirectPath(redirectTo));

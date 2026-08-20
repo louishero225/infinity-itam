@@ -32,10 +32,13 @@ export async function createEmploye(input: {
   fonction?: string | null;
   site?: string | null;
   matricule?: string | null;
+  email?: string | null;
   statut?: string | null;
 }) {
   await requireWrite();
   const supabase = await createSupabaseServerClient();
+
+  const email = input.email?.trim().toLowerCase() || null;
 
   const { error } = await supabase.from("employes").insert({
     prenom: input.prenom,
@@ -45,6 +48,7 @@ export async function createEmploye(input: {
     fonction: input.fonction ?? null,
     site: input.site ?? null,
     matricule: input.matricule ?? null,
+    email,
     statut: input.statut ?? "Actif",
   });
 
@@ -54,16 +58,45 @@ export async function createEmploye(input: {
         `Le matricule "${input.matricule}" existe déjà. Veuillez choisir un matricule différent.`
       );
     }
+    if (error.code === "23505" && error.message.toLowerCase().includes("email")) {
+      throw new Error(`L'email "${email}" est déjà associé à un autre collaborateur.`);
+    }
     throw new Error(error.message);
   }
 
   await logAudit({
     action: "create_employe",
     entityType: "employe",
-    details: { nom: `${input.prenom} ${input.nom}` },
+    details: { nom: `${input.prenom} ${input.nom}`, email },
   });
 
   revalidatePath("/employes");
+}
+
+/** Associe / met à jour l'email Microsoft d'un collaborateur (clé du portail Mes demandes). */
+export async function updateEmployeEmail(employeId: string, email: string | null) {
+  await requireWrite();
+  const supabase = await createSupabaseServerClient();
+  const clean = email?.trim().toLowerCase() || null;
+
+  const { error } = await supabase.from("employes").update({ email: clean }).eq("id", employeId);
+  if (error) {
+    if (error.code === "23505") {
+      throw new Error("Cet email est déjà utilisé par un autre collaborateur.");
+    }
+    throw new Error(error.message);
+  }
+
+  await logAudit({
+    action: "employe.update_email",
+    entityType: "employe",
+    entityId: employeId,
+    details: { email: clean },
+  });
+
+  revalidatePath("/employes");
+  revalidatePath(`/employes/${employeId}`);
+  revalidatePath("/mes-demandes");
 }
 
 export async function mergeEmployes(sourceId: string, targetId: string) {

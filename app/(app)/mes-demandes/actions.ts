@@ -20,6 +20,10 @@ export type CollaborateurProfil = {
   email: string | null;
 } | null;
 
+/**
+ * Lie le compte connecté (souvent Microsoft) à la fiche employé
+ * via l'email professionnel renseigné sur l'employé.
+ */
 export async function resolveCollaborateurProfil(): Promise<{
   access: Awaited<ReturnType<typeof getAccess>>;
   employe: CollaborateurProfil;
@@ -51,49 +55,84 @@ export async function resolveCollaborateurProfil(): Promise<{
   return { access, employe };
 }
 
+/** Tickets du collaborateur : employe_id + nom demandeur + portail (email). */
 export async function listMesDemandes() {
   const { access, employe } = await resolveCollaborateurProfil();
   const supabase = await createSupabaseServerClient();
+  const byId = new Map<string, IitsmTicket>();
+
+  async function addRows(rows: IitsmTicket[] | null | undefined) {
+    for (const t of rows ?? []) {
+      byId.set(t.id, t);
+    }
+  }
 
   if (employe) {
-    const { data, error } = await supabase
+    // 1) Lien fort FK
+    const { data: byEmploye, error } = await supabase
       .from("tickets")
       .select("*")
       .eq("employe_id", employe.id)
       .order("date", { ascending: false })
-      .order("heure_creation", { ascending: false })
-      .limit(50);
+      .limit(100);
 
-    if (!error && data) {
-      return { tickets: data as IitsmTicket[], employe, access };
+    if (!error) {
+      await addRows(byEmploye as IitsmTicket[]);
     }
 
-    // Migration employe_id absente : filtre par nom
-    if (error?.message?.includes("employe_id")) {
-      const name = employeDisplayName(employe.prenom, employe.nom);
-      const { data: byName } = await supabase
-        .from("tickets")
-        .select("*")
-        .ilike("demandeur", name)
-        .order("date", { ascending: false })
-        .limit(50);
-      return { tickets: (byName ?? []) as IitsmTicket[], employe, access };
-    }
-  }
-
-  // Repli : tickets créés avec l'email dans la description/canal portail + demandeur = email
-  if (access.email) {
-    const { data } = await supabase
+    // 2) Anciens tickets (avant sync) : même nom
+    const name = employeDisplayName(employe.prenom, employe.nom);
+    const { data: byName } = await supabase
       .from("tickets")
       .select("*")
-      .eq("canal", "Portail")
-      .or(`demandeur.ilike.%${access.email}%,description.ilike.%${access.email}%`)
+      .ilike("demandeur", name)
       .order("date", { ascending: false })
-      .limit(50);
-    return { tickets: (data ?? []) as IitsmTicket[], employe, access };
+      .limit(100);
+    await addRows(byName as IitsmTicket[]);
+
+    // Rattache silencieusement les tickets trouvés par nom sans employe_id
+    if (!error) {
+      const toLink = (byName ?? []).filter(
+        (t) => !(t as IitsmTicket).employe_id || (t as IitsmTicket).employe_id !== employe.id
+      );
+      for (const t of toLink.slice(0, 50)) {
+        await supabase
+          .from("tickets")
+          .update({ employe_id: employe.id, demandeur: name })
+          .eq("id", t.id);
+      }
+    }
   }
 
-  return { tickets: [] as IitsmTicket[], employe, access };
+  // 3) Demandes portail saisies avec cet email
+  if (access.email) {
+    const email = access.email;
+    const [{ data: bySousCanal }, { data: byDemandeurEmail }] = await Promise.all([
+      supabase
+        .from("tickets")
+        .select("*")
+        .eq("canal", "Portail")
+        .eq("sous_canal", email)
+        .order("date", { ascending: false })
+        .limit(100),
+      supabase
+        .from("tickets")
+        .select("*")
+        .ilike("demandeur", `%${email}%`)
+        .order("date", { ascending: false })
+        .limit(50),
+    ]);
+    await addRows(bySousCanal as IitsmTicket[]);
+    await addRows(byDemandeurEmail as IitsmTicket[]);
+  }
+
+  const tickets = Array.from(byId.values()).sort((a, b) => {
+    const da = `${a.date}T${a.heure_creation}`;
+    const db = `${b.date}T${b.heure_creation}`;
+    return db.localeCompare(da);
+  });
+
+  return { tickets, employe, access };
 }
 
 export async function createDemandeFromForm(formData: FormData) {
@@ -158,7 +197,6 @@ export async function createDemandeFromForm(formData: FormData) {
   const { data, error } = await supabase.from("tickets").insert(payload).select("id").maybeSingle();
 
   if (error) {
-    // Si employe_id n'existe pas encore, réessayer sans
     if (error.message.includes("employe_id")) {
       delete payload.employe_id;
       const retry = await supabase.from("tickets").insert(payload).select("id").maybeSingle();

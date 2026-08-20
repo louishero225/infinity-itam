@@ -53,24 +53,33 @@ export default async function DashboardPage() {
   if (access?.isCollaborateurOnly) {
     redirect("/mes-demandes");
   }
-  const supabase = await createSupabaseServerClient();
 
-  const [
-    { data: synthese },
-    { count: alertesCount },
-    stats,
-    tickets,
-    faits,
-  ] = await Promise.all([
-    supabase.from("v_direction_synthese").select("*").maybeSingle<SyntheseRow>(),
-    supabase
-      .from("alertes")
-      .select("*", { count: "exact", head: true })
-      .eq("statut", "active"),
-    getItsmStats().catch(() => ({ total: 0, ouverts: 0, enRetard: 0, resolus: 0 })),
-    listTickets().catch(() => []),
-    getFaitsMarquantsToday().catch(() => ""),
-  ]);
+  let synthese: SyntheseRow | null = null;
+  let alertesCount: number | null = 0;
+  let stats = { total: 0, ouverts: 0, enRetard: 0, resolus: 0 };
+  let tickets: Awaited<ReturnType<typeof listTickets>> = [];
+  let faits = "";
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const results = await Promise.all([
+      supabase.from("v_direction_synthese").select("*").maybeSingle<SyntheseRow>(),
+      supabase
+        .from("alertes")
+        .select("*", { count: "exact", head: true })
+        .eq("statut", "active"),
+      getItsmStats().catch(() => ({ total: 0, ouverts: 0, enRetard: 0, resolus: 0 })),
+      listTickets().catch(() => []),
+      getFaitsMarquantsToday().catch(() => ""),
+    ]);
+    synthese = results[0].data;
+    alertesCount = results[1].count;
+    stats = results[2];
+    tickets = results[3];
+    faits = results[4];
+  } catch {
+    // Réseau / auth instable : afficher le dashboard vide plutôt qu'une erreur
+  }
 
   const recentTickets = tickets.slice(0, 8);
   const today = new Date().toLocaleDateString("fr-FR", {

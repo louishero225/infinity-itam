@@ -31,6 +31,7 @@ const schema = z.object({
   prenom: z.string().min(1),
   nom: z.string().min(1),
   departement: z.string().min(1),
+  email: z.string().email("Email Microsoft / professionnel").optional().or(z.literal("")),
   service: z.string().optional(),
   fonction: z.string().optional(),
   site: z.string().optional(),
@@ -57,6 +58,7 @@ export function EmployeFormDialog() {
         prenom: values.prenom,
         nom: values.nom,
         departement: values.departement,
+        email: values.email || null,
         service: values.service || null,
         fonction: values.fonction || null,
         site: values.site || null,
@@ -80,7 +82,10 @@ export function EmployeFormDialog() {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Nouvel employé</DialogTitle>
-          <DialogDescription>Ajoutez un employé ou utilisateur au référentiel.</DialogDescription>
+          <DialogDescription>
+            Ajoutez un collaborateur. L&apos;email Microsoft permet de retrouver automatiquement
+            ses tickets dans le portail.
+          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -113,6 +118,24 @@ export function EmployeFormDialog() {
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email Microsoft</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      placeholder="prenom.nom@entreprise.com"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

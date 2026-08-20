@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { EmployeActions } from "@/components/app/employes/employe-actions";
+import { EmployeEmailField } from "@/components/app/employes/employe-email-field";
 import { EmployeTicketsCard } from "@/components/app/employes/employe-tickets-card";
 import { FicheOnboardingButton } from "@/components/app/attributions/fiche-onboarding-button";
 import { listTicketsForEmploye } from "@/app/(app)/itsm/actions";
@@ -27,6 +28,7 @@ type EmployeRow = {
   site: string | null;
   matricule: string | null;
   statut: string | null;
+  email: string | null;
 };
 
 type AttributionRow = {
@@ -127,6 +129,7 @@ export default async function EmployeDetailPage({
             <span className="text-muted-foreground">Statut: </span>
             {employe.statut ?? "—"}
           </div>
+          <EmployeEmailField employeId={id} initialEmail={employe.email ?? null} />
         </CardContent>
       </Card>
 
