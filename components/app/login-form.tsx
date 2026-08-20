@@ -34,13 +34,17 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") ?? "/dashboard";
   const oauthError = searchParams.get("error");
-  const [error, setError] = React.useState<string | null>(
-    oauthError === "oauth_failed"
-      ? "Connexion Microsoft échouée. Vérifiez la config Azure dans Supabase."
-      : oauthError
-        ? decodeURIComponent(oauthError)
-        : null
-  );
+  const [error, setError] = React.useState<string | null>(() => {
+    if (!oauthError) return null;
+    if (oauthError === "oauth_failed") {
+      return "Connexion Microsoft échouée. Vérifiez Azure dans Supabase + Redirect URLs.";
+    }
+    try {
+      return decodeURIComponent(oauthError);
+    } catch {
+      return oauthError;
+    }
+  });
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   async function handleSubmit(formData: FormData) {
