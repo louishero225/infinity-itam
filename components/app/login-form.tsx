@@ -8,13 +8,17 @@ import { signInWithMicrosoft } from "@/app/login/microsoft-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+
+function MicrosoftLogo({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 21 21" aria-hidden>
+      <rect x="1" y="1" width="9" height="9" fill="#F25022" />
+      <rect x="11" y="1" width="9" height="9" fill="#7FBA00" />
+      <rect x="1" y="11" width="9" height="9" fill="#00A4EF" />
+      <rect x="11" y="11" width="9" height="9" fill="#FFB900" />
+    </svg>
+  );
+}
 
 export function LoginForm() {
   const searchParams = useSearchParams();
@@ -41,77 +45,86 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="border-slate-200 bg-white text-slate-900 shadow-xl">
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-bold text-slate-900">INFINITY IT</CardTitle>
-        <CardDescription className="text-slate-600">
-          Support IT & gestion de parc
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <form action={signInWithMicrosoft}>
-          <input type="hidden" name="redirectTo" value={redirectTo} />
-          <Button
-            type="submit"
-            variant="outline"
-            className="w-full border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
-          >
-            Continuer avec Microsoft
-          </Button>
-        </form>
+    <div className="flex h-full flex-col justify-center px-6 py-10 sm:px-10 lg:px-12">
+      <div className="mb-8">
+        <p className="text-xs font-semibold tracking-[0.18em] text-slate-400 uppercase">
+          INFINITY AFRICA GROUP
+        </p>
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">Connexion</h1>
+        <p className="mt-2 text-sm text-slate-500">
+          Bienvenue sur votre espace Support IT &amp; parc informatique.
+        </p>
+      </div>
 
-        <div className="relative py-1">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-slate-200" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-2 text-slate-500">ou</span>
-          </div>
+      <form action={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="email" className="text-slate-700">
+            Identifiant
+          </Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            required
+            placeholder="vous@entreprise.com"
+            className="h-11 rounded-xl border-slate-200 bg-white text-slate-900 placeholder:text-slate-400"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="password" className="text-slate-700">
+            Mot de passe
+          </Label>
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            required
+            className="h-11 rounded-xl border-slate-200 bg-white text-slate-900"
+          />
         </div>
 
-        <form action={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-slate-800">
-              Email
-            </Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              placeholder="vous@entreprise.com"
-              className="border-slate-300 bg-white text-slate-900 placeholder:text-slate-400"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password" className="text-slate-800">
-              Mot de passe
-            </Label>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              className="border-slate-300 bg-white text-slate-900"
-            />
-          </div>
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
-          <Button
-            type="submit"
-            className="w-full bg-slate-900 text-white hover:bg-slate-800"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? "Connexion…" : "Se connecter"}
-          </Button>
-        </form>
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-        <p className="text-center text-xs text-slate-500">
-          Collaborateurs : utilisez Microsoft ou un compte fourni par l&apos;IT, puis{" "}
-          <span className="font-medium text-slate-700">Mes demandes</span>.
+        <Button
+          type="submit"
+          className="h-11 w-full rounded-xl bg-slate-900 text-white hover:bg-slate-800"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Connexion…" : "Se connecter"}
+        </Button>
+
+        <p className="text-right text-xs text-slate-500">
+          Mot de passe oublié ? Contactez l&apos;équipe IT.
         </p>
-      </CardContent>
-    </Card>
+      </form>
+
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-slate-200" />
+        </div>
+        <div className="relative flex justify-center text-xs font-medium tracking-wide text-slate-400 uppercase">
+          <span className="bg-white px-3">ou</span>
+        </div>
+      </div>
+
+      <form action={signInWithMicrosoft}>
+        <input type="hidden" name="redirectTo" value={redirectTo} />
+        <Button
+          type="submit"
+          variant="outline"
+          className="h-11 w-full rounded-xl border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+        >
+          <MicrosoftLogo className="size-4" />
+          Continuer avec Microsoft
+        </Button>
+      </form>
+
+      <p className="mt-6 text-center text-xs leading-relaxed text-slate-500">
+        Collaborateurs : après connexion, ouvrez{" "}
+        <span className="font-medium text-slate-700">Mes demandes</span> pour contacter le support.
+      </p>
+    </div>
   );
 }
