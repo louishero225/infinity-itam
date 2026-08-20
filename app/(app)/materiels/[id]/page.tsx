@@ -5,7 +5,10 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/app/page-header";
 import { PiecesJointesCard } from "@/components/app/pieces-jointes-card";
+import { MaterielTicketsCard } from "@/components/app/materiels/materiel-tickets-card";
 import { listPiecesJointes } from "@/app/(app)/fichiers/actions";
+import { listTicketsForEmploye } from "@/app/(app)/itsm/actions";
+import { employeDisplayName } from "@/lib/utils/employe-matching";
 import {
   Table,
   TableBody,
@@ -99,6 +102,14 @@ export default async function MaterielDetailPage({
       </div>
     );
   }
+
+  const detenteur = actuel?.employe ?? null;
+  const ticketsDetenteur = detenteur
+    ? await listTicketsForEmploye(detenteur.id).catch(() => [])
+    : [];
+  const detenteurLabel = detenteur
+    ? employeDisplayName(detenteur.prenom, detenteur.nom)
+    : null;
 
   const beneficiaire = (() => {
     if (!actuel) return null;
@@ -251,6 +262,8 @@ export default async function MaterielDetailPage({
           </Table>
         </CardContent>
       </Card>
+
+      <MaterielTicketsCard tickets={ticketsDetenteur} detenteurLabel={detenteurLabel} />
 
       {materiel.observations ? (
         <Card>

@@ -1,7 +1,13 @@
 import "server-only";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { RoleCode } from "@/lib/auth/role-types";
+import {
+  canRequestTicket,
+  canWriteItsm,
+  isRoleCode,
+  isStaffRole,
+  type RoleCode,
+} from "@/lib/auth/role-types";
 
 export type { RoleCode };
 
@@ -11,13 +17,10 @@ export type Access = {
   roles: RoleCode[];
   canWrite: boolean;
   canAdmin: boolean;
+  canRequestTicket: boolean;
+  isStaff: boolean;
+  isCollaborateurOnly: boolean;
 };
-
-const ROLE_CODES: RoleCode[] = ["admin", "itam", "lecture"];
-
-function isRoleCode(value: string): value is RoleCode {
-  return ROLE_CODES.includes(value as RoleCode);
-}
 
 export async function getAccess(): Promise<Access> {
   const supabase = await createSupabaseServerClient();
@@ -46,6 +49,7 @@ export async function getAccess(): Promise<Access> {
     }
   }
 
+  // Compte sans rôle assigné : accès staff complet (bootstrap / comptes historiques)
   if (roles.length === 0) {
     return {
       userId: user.id,
@@ -53,11 +57,16 @@ export async function getAccess(): Promise<Access> {
       roles: ["admin", "itam"],
       canWrite: true,
       canAdmin: true,
+      canRequestTicket: true,
+      isStaff: true,
+      isCollaborateurOnly: false,
     };
   }
 
   const canAdmin = roles.includes("admin");
-  const canWrite = canAdmin || roles.includes("itam");
+  const canWrite = canAdmin || canWriteItsm(roles);
+  const isStaff = isStaffRole(roles);
+  const isCollaborateurOnly = roles.includes("collaborateur") && !isStaff && !canAdmin;
 
   return {
     userId: user.id,
@@ -65,6 +74,9 @@ export async function getAccess(): Promise<Access> {
     roles,
     canWrite,
     canAdmin,
+    canRequestTicket: canRequestTicket(roles),
+    isStaff,
+    isCollaborateurOnly,
   };
 }
 
@@ -80,6 +92,14 @@ export async function requireAdmin() {
   const access = await getAccess();
   if (!access.canAdmin) {
     throw new Error("Cette action est réservée aux administrateurs.");
+  }
+  return access;
+}
+
+export async function requireTicketRequest() {
+  const access = await getAccess();
+  if (!access.canRequestTicket) {
+    throw new Error("Vous n'êtes pas autorisé à créer une demande.");
   }
   return access;
 }

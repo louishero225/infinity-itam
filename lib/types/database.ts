@@ -296,6 +296,7 @@ export type Database = {
         Row: {
           created_at: string | null
           departement: string
+          email: string | null
           fonction: string | null
           id: string
           matricule: string | null
@@ -308,6 +309,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           departement: string
+          email?: string | null
           fonction?: string | null
           id?: string
           matricule?: string | null
@@ -320,6 +322,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           departement?: string
+          email?: string | null
           fonction?: string | null
           id?: string
           matricule?: string | null

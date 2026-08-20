@@ -4,6 +4,7 @@ import * as React from "react";
 import { useSearchParams } from "next/navigation";
 
 import { signIn } from "@/app/login/actions";
+import { signInWithMicrosoft } from "@/app/login/microsoft-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +19,14 @@ import {
 export function LoginForm() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") ?? "/dashboard";
-  const [error, setError] = React.useState<string | null>(null);
+  const oauthError = searchParams.get("error");
+  const [error, setError] = React.useState<string | null>(
+    oauthError === "oauth_failed"
+      ? "Connexion Microsoft échouée. Vérifiez la config Azure dans Supabase."
+      : oauthError
+        ? decodeURIComponent(oauthError)
+        : null
+  );
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   async function handleSubmit(formData: FormData) {
@@ -35,14 +43,32 @@ export function LoginForm() {
   return (
     <Card className="border-slate-200 bg-white text-slate-900 shadow-xl">
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-bold text-slate-900">
-          INFINITY ITAM
-        </CardTitle>
+        <CardTitle className="text-2xl font-bold text-slate-900">INFINITY IT</CardTitle>
         <CardDescription className="text-slate-600">
-          Connectez-vous pour accéder au parc informatique
+          Support IT & gestion de parc
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        <form action={signInWithMicrosoft}>
+          <input type="hidden" name="redirectTo" value={redirectTo} />
+          <Button
+            type="submit"
+            variant="outline"
+            className="w-full border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
+          >
+            Continuer avec Microsoft
+          </Button>
+        </form>
+
+        <div className="relative py-1">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-slate-200" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-white px-2 text-slate-500">ou</span>
+          </div>
+        </div>
+
         <form action={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email" className="text-slate-800">
@@ -80,6 +106,11 @@ export function LoginForm() {
             {isSubmitting ? "Connexion…" : "Se connecter"}
           </Button>
         </form>
+
+        <p className="text-center text-xs text-slate-500">
+          Collaborateurs : utilisez Microsoft ou un compte fourni par l&apos;IT, puis{" "}
+          <span className="font-medium text-slate-700">Mes demandes</span>.
+        </p>
       </CardContent>
     </Card>
   );

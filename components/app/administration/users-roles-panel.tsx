@@ -20,8 +20,9 @@ import { Label } from "@/components/ui/label";
 
 const ALL_ROLES: { code: RoleCode; label: string; hint: string }[] = [
   { code: "admin", label: "Admin", hint: "Administration + Audit" },
-  { code: "itam", label: "ITAM", hint: "Lecture / écriture parc" },
+  { code: "itam", label: "IT / Support", hint: "Parc + tickets" },
   { code: "lecture", label: "Lecture", hint: "Consultation seule" },
+  { code: "collaborateur", label: "Collaborateur", hint: "Portail Mes demandes" },
 ];
 
 type Props = {

@@ -26,7 +26,7 @@ export const ITSM_CATEGORIES = [
   "Autre",
 ] as const;
 
-export const ITSM_CANAUX = ["Téléphone", "Verbal", "Email", "ManageEngine"] as const;
+export const ITSM_CANAUX = ["Téléphone", "Verbal", "Email", "ManageEngine", "Portail"] as const;
 
 export const DEFAULT_TECHNICIAN = "Guillaume BADOU";
 

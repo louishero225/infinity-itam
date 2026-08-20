@@ -3,6 +3,7 @@
 import * as React from "react";
 import { MenuIcon } from "lucide-react";
 
+import { AppBrand } from "@/components/app/app-brand";
 import { LogoutButton } from "@/components/app/logout-button";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,8 +14,9 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { SidebarNav } from "@/components/app/sidebar";
+import { APP_NAME } from "@/lib/navigation";
 
-export function MobileNav({ title }: { title: string }) {
+export function MobileNav() {
   return (
     <div className="flex items-center gap-3">
       <Sheet>
@@ -23,13 +25,14 @@ export function MobileNav({ title }: { title: string }) {
             <MenuIcon className="size-4" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="p-0">
-          <div className="p-4">
+        <SheetContent side="left" className="w-72 p-0">
+          <div className="border-b p-4">
             <SheetHeader>
-              <SheetTitle>{title}</SheetTitle>
+              <SheetTitle className="sr-only">{APP_NAME}</SheetTitle>
             </SheetHeader>
+            <AppBrand compact />
           </div>
-          <div className="px-3 pb-4">
+          <div className="overflow-y-auto px-3 py-4">
             <SidebarNav />
             <div className="mt-4 border-t pt-4">
               <LogoutButton />
@@ -37,7 +40,7 @@ export function MobileNav({ title }: { title: string }) {
           </div>
         </SheetContent>
       </Sheet>
-      <div className="text-sm font-semibold md:hidden">{title}</div>
+      <div className="text-sm font-semibold md:hidden">{APP_NAME}</div>
     </div>
   );
 }

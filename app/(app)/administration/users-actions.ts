@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { requireAdmin, getAccess } from "@/lib/auth/roles";
 import type { RoleCode } from "@/lib/auth/role-types";
+import { ROLE_CODES } from "@/lib/auth/role-types";
 import { logAudit } from "@/lib/server/audit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -16,8 +17,6 @@ export type AdminUserRow = {
   roles: RoleCode[];
   source: "compte" | "auth";
 };
-
-const ROLE_CODES: RoleCode[] = ["admin", "itam", "lecture"];
 
 function requireServiceRole() {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {

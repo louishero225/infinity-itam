@@ -5,6 +5,7 @@ import { getAccess } from "@/lib/auth/roles";
 import { isResolutionAnomaly } from "@/lib/itsm/sla";
 import { ITSM_PRIORITES, ITSM_STATUTS } from "@/lib/itsm/constants";
 import { PageHeader } from "@/components/app/page-header";
+import { TicketDemandeurParcCard } from "@/components/app/itsm/ticket-demandeur-parc-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,7 +45,7 @@ export default async function TicketDetailPage({
   const detail = await getTicketDetail(id);
   if (!detail) redirect("/itsm");
 
-  const { ticket, comments, pieces, history } = detail;
+  const { ticket, comments, pieces, history, demandeurParc } = detail;
   const canWrite = access.canWrite;
   const resolutionAnomaly = isResolutionAnomaly({
     date: ticket.date,
@@ -55,18 +56,16 @@ export default async function TicketDetailPage({
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Ticket ITSM"
+        title="Ticket support"
         description={`${ticket.demandeur} · ${ticket.categorie} · ${ticket.statut}`}
+        backHref="/itsm"
+        backLabel="Tickets"
       />
-
-      <Button variant="ghost" size="sm" className="w-fit" asChild>
-        <Link href="/itsm">← Retour à la liste</Link>
-      </Button>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-base">
               Détails
               {ticket.en_retard ? (
                 <Badge variant="destructive">En retard</Badge>
@@ -84,26 +83,26 @@ export default async function TicketDetailPage({
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <Label>Entité</Label>
-                <p className="text-sm mt-1">{ticket.entite}</p>
+                <p className="mt-1 text-sm">{ticket.entite}</p>
               </div>
               <div>
                 <Label>Priorité</Label>
-                <p className="text-sm mt-1">{ticket.priorite}</p>
+                <p className="mt-1 text-sm">{ticket.priorite}</p>
               </div>
               <div>
                 <Label>Technicien</Label>
-                <p className="text-sm mt-1">{ticket.technicien}</p>
+                <p className="mt-1 text-sm">{ticket.technicien}</p>
               </div>
               <div>
                 <Label>Référence</Label>
-                <p className="text-sm mt-1">{ticket.ticket_ref ?? "—"}</p>
+                <p className="mt-1 text-sm">{ticket.ticket_ref ?? "—"}</p>
               </div>
             </div>
 
             {ticket.description ? (
               <div className="space-y-1">
                 <Label>Description</Label>
-                <p className="text-sm text-muted-foreground">{ticket.description}</p>
+                <p className="text-muted-foreground text-sm">{ticket.description}</p>
               </div>
             ) : null}
 
@@ -118,7 +117,7 @@ export default async function TicketDetailPage({
                         id="statut"
                         name="statut"
                         defaultValue={ticket.statut}
-                        className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                        className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
                       >
                         {ITSM_STATUTS.map((s) => (
                           <option key={s} value={s}>
@@ -133,7 +132,7 @@ export default async function TicketDetailPage({
                         id="priorite"
                         name="priorite"
                         defaultValue={ticket.priorite}
-                        className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                        className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
                       >
                         {ITSM_PRIORITES.map((p) => (
                           <option key={p} value={p}>
@@ -190,7 +189,7 @@ export default async function TicketDetailPage({
                         {new Date(c.created_at).toLocaleString("fr-FR")}
                       </p>
                     </div>
-                    <p className="text-sm mt-2 whitespace-pre-wrap">{c.contenu}</p>
+                    <p className="mt-2 whitespace-pre-wrap text-sm">{c.contenu}</p>
                   </div>
                 ))}
               </div>
@@ -207,6 +206,8 @@ export default async function TicketDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      <TicketDemandeurParcCard demandeurLabel={ticket.demandeur} context={demandeurParc} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <PiecesJointesCard entityType="itsm_ticket" entityId={ticket.id} pieces={pieces} />
@@ -229,7 +230,7 @@ export default async function TicketDetailPage({
                         {new Date(h.created_at).toLocaleString("fr-FR")}
                       </p>
                     </div>
-                    <p className="text-sm mt-2">{h.action}</p>
+                    <p className="mt-2 text-sm">{h.action}</p>
                   </div>
                 ))}
               </div>
@@ -240,4 +241,3 @@ export default async function TicketDetailPage({
     </div>
   );
 }
-

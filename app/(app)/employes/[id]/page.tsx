@@ -13,7 +13,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { EmployeActions } from "@/components/app/employes/employe-actions";
+import { EmployeTicketsCard } from "@/components/app/employes/employe-tickets-card";
 import { FicheOnboardingButton } from "@/components/app/attributions/fiche-onboarding-button";
+import { listTicketsForEmploye } from "@/app/(app)/itsm/actions";
 
 type EmployeRow = {
   id: string;
@@ -45,7 +47,7 @@ export default async function EmployeDetailPage({
   const { id } = await params;
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: employe, error: empError }, { data: actifs }, { data: histo }] =
+  const [{ data: employe, error: empError }, { data: actifs }, { data: histo }, tickets] =
     await Promise.all([
       supabase
         .from("employes")
@@ -72,6 +74,7 @@ export default async function EmployeDetailPage({
         .order("date_attribution", { ascending: false })
         .limit(200)
         .returns<AttributionRow[]>(),
+      listTicketsForEmploye(id).catch(() => []),
     ]);
 
   if (empError) {
@@ -126,6 +129,8 @@ export default async function EmployeDetailPage({
           </div>
         </CardContent>
       </Card>
+
+      <EmployeTicketsCard tickets={tickets} />
 
       <Card>
         <CardHeader>

@@ -10,12 +10,14 @@ import { listPiecesJointes } from "@/app/(app)/fichiers/actions";
 import { DEFAULT_TECHNICIAN, ONBOARDING_STEPS } from "@/lib/itsm/constants";
 import { parseManageEngineCsv } from "@/lib/itsm/manageengine-import";
 import { matchEmployeFromLabel } from "@/lib/itsm/person-matching";
+import { pickDemandeurEmployeId } from "@/lib/itsm/ticket-context";
 import {
   computeEnRetardSaisie,
   pad2,
   toIsoOrNull,
 } from "@/lib/itsm/sla";
 import { employeDisplayName } from "@/lib/utils/employe-matching";
+import type { DemandeurParcContext } from "@/components/app/itsm/ticket-demandeur-parc-card";
 
 export type IitsmTicket = {
   id: string;
@@ -230,6 +232,128 @@ export async function listTickets() {
   return (data ?? []) as IitsmTicket[];
 }
 
+type AttributionParcRow = {
+  id: string;
+  date_attribution: string;
+  materiel: {
+    id: string;
+    code_materiel: string;
+    type: string;
+    marque: string | null;
+    modele: string | null;
+    statut: string | null;
+  } | null;
+};
+
+async function resolveMatchedEmployeId(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  demandeur: string
+) {
+  const { data: employes } = await supabase
+    .from("employes")
+    .select("id, prenom, nom, statut")
+    .order("nom");
+  const actifs = (employes ?? []).filter((e) => (e.statut ?? "Actif") === "Actif");
+  return matchEmployeFromLabel(demandeur, actifs)?.id ?? null;
+}
+
+export async function getDemandeurParcContext(input: {
+  employeId?: string | null;
+  demandeur: string;
+}): Promise<DemandeurParcContext> {
+  const supabase = await createSupabaseServerClient();
+
+  const matchedEmployeId = input.employeId?.trim()
+    ? null
+    : await resolveMatchedEmployeId(supabase, input.demandeur);
+
+  const employeId = pickDemandeurEmployeId({
+    ticketEmployeId: input.employeId,
+    matchedEmployeId,
+  });
+
+  const resolvedVia: DemandeurParcContext["resolvedVia"] = input.employeId?.trim()
+    ? "employe_id"
+    : employeId
+      ? "nom"
+      : null;
+
+  if (!employeId) {
+    return { employe: null, materiels: [], resolvedVia: null };
+  }
+
+  const [{ data: employe }, { data: attributions }] = await Promise.all([
+    supabase
+      .from("employes")
+      .select("id, prenom, nom, departement, site, fonction")
+      .eq("id", employeId)
+      .maybeSingle(),
+    supabase
+      .from("attributions")
+      .select(
+        `id, date_attribution,
+         materiel:materiel_id (id, code_materiel, type, marque, modele, statut)`
+      )
+      .eq("employe_id", employeId)
+      .eq("statut", "Actif")
+      .order("date_attribution", { ascending: false })
+      .returns<AttributionParcRow[]>(),
+  ]);
+
+  return {
+    employe: employe
+      ? {
+          id: employe.id,
+          prenom: employe.prenom,
+          nom: employe.nom,
+          departement: employe.departement,
+          site: employe.site,
+          fonction: employe.fonction,
+        }
+      : null,
+    materiels: (attributions ?? []).map((a) => ({
+      attribution_id: a.id,
+      date_attribution: a.date_attribution,
+      materiel: a.materiel,
+    })),
+    resolvedVia: employe ? resolvedVia : null,
+  };
+}
+
+export async function listTicketsForEmploye(employeId: string, limit = 30) {
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from("tickets")
+    .select("id, date, heure_creation, demandeur, categorie, statut, en_retard, description")
+    .eq("employe_id", employeId)
+    .order("date", { ascending: false })
+    .order("heure_creation", { ascending: false })
+    .limit(limit);
+
+  // Colonne employe_id absente (migration 08 non appliquée) → repli par nom
+  if (error?.message?.includes("employe_id")) {
+    const { data: emp } = await supabase
+      .from("employes")
+      .select("prenom, nom")
+      .eq("id", employeId)
+      .maybeSingle();
+    if (!emp) return [];
+    const name = employeDisplayName(emp.prenom, emp.nom);
+    const { data: byName, error: nameError } = await supabase
+      .from("tickets")
+      .select("id, date, heure_creation, demandeur, categorie, statut, en_retard, description")
+      .ilike("demandeur", name)
+      .order("date", { ascending: false })
+      .limit(limit);
+    if (nameError) return [];
+    return byName ?? [];
+  }
+
+  if (error) return [];
+  return data ?? [];
+}
+
 export async function getTicketDetail(ticketId: string) {
   const supabase = await createSupabaseServerClient();
 
@@ -242,31 +366,38 @@ export async function getTicketDetail(ticketId: string) {
   if (ticketError) throw new Error(ticketError.message);
   if (!ticket) return null;
 
-  const { data: comments, error: commentsError } = await supabase
-    .from("ticket_comments")
-    .select("id, ticket_id, contenu, created_by, created_by_email, created_at")
-    .eq("ticket_id", ticketId)
-    .order("created_at", { ascending: true });
+  const typedTicket = ticket as IitsmTicket;
+
+  const [{ data: comments, error: commentsError }, { data: history, error: historyError }, pieces, demandeurParc] =
+    await Promise.all([
+      supabase
+        .from("ticket_comments")
+        .select("id, ticket_id, contenu, created_by, created_by_email, created_at")
+        .eq("ticket_id", ticketId)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("audit_log")
+        .select("id, created_at, user_email, action, entity_type, entity_id, details")
+        .eq("entity_type", "tickets")
+        .eq("entity_id", ticketId)
+        .order("created_at", { ascending: false })
+        .limit(50),
+      listPiecesJointes("itsm_ticket", ticketId),
+      getDemandeurParcContext({
+        employeId: typedTicket.employe_id,
+        demandeur: typedTicket.demandeur,
+      }),
+    ]);
 
   if (commentsError) throw new Error(commentsError.message);
-
-  const { data: history, error: historyError } = await supabase
-    .from("audit_log")
-    .select("id, created_at, user_email, action, entity_type, entity_id, details")
-    .eq("entity_type", "tickets")
-    .eq("entity_id", ticketId)
-    .order("created_at", { ascending: false })
-    .limit(50);
-
   if (historyError) throw new Error(historyError.message);
 
-  const pieces = await listPiecesJointes("itsm_ticket", ticketId);
-
   return {
-    ticket: ticket as IitsmTicket,
+    ticket: typedTicket,
     comments: comments ?? [],
     pieces,
     history: history ?? [],
+    demandeurParc,
   };
 }
 

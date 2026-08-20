@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "INFINITY ITAM",
-  description: "Système IT Asset Management - INFINITY AFRICA GROUP",
+  title: "INFINITY IT",
+  description: "Plateforme Support IT & ITAM — INFINITY AFRICA GROUP",
 };
 
 export default function RootLayout({

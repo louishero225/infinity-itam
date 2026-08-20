@@ -11,6 +11,7 @@ export async function updateSession(request: NextRequest) {
     const pathname = request.nextUrl.pathname;
     const isPublic =
       pathname.startsWith("/login") ||
+      pathname.startsWith("/auth/callback") ||
       pathname.startsWith("/_next") ||
       pathname.startsWith("/favicon") ||
       pathname.includes(".");
@@ -45,8 +46,10 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
   const isLogin = pathname.startsWith("/login");
+  const isAuthCallback = pathname.startsWith("/auth/callback");
   const isPublic =
     isLogin ||
+    isAuthCallback ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
     pathname.includes(".");
