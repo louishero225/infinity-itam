@@ -49,17 +49,18 @@ export async function getAccess(): Promise<Access> {
     }
   }
 
-  // Compte sans rôle assigné : accès staff complet (bootstrap / comptes historiques)
+  // Sans rôle en base : portail collaborateur uniquement.
+  // Les admins / IT doivent avoir un rôle explicite (Administration).
   if (roles.length === 0) {
     return {
       userId: user.id,
       email: user.email ?? null,
-      roles: ["admin", "itam"],
-      canWrite: true,
-      canAdmin: true,
+      roles: ["collaborateur"],
+      canWrite: false,
+      canAdmin: false,
       canRequestTicket: true,
-      isStaff: true,
-      isCollaborateurOnly: false,
+      isStaff: false,
+      isCollaborateurOnly: true,
     };
   }
 

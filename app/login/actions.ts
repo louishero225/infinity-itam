@@ -20,6 +20,19 @@ export async function signIn(formData: FormData) {
     if (error) {
       return { error: "Identifiants invalides." };
     }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      const { provisionCollaborateurOnFirstLogin } = await import(
+        "@/lib/auth/provision-collaborateur"
+      );
+      await provisionCollaborateurOnFirstLogin({
+        userId: user.id,
+        email: user.email ?? null,
+      });
+    }
   } catch {
     return {
       error:
