@@ -2,9 +2,11 @@
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { X } from "lucide-react";
+import { LayoutGrid, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { MaterielIcon } from "@/lib/utils/materiel-icons";
+import { cn } from "@/lib/utils";
 
 type TypeChipsProps = {
   types: { label: string; value: string; count: number }[];
@@ -33,16 +35,18 @@ export function TypeChips({ types }: TypeChipsProps) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-sm text-muted-foreground mr-1">Catégories:</span>
-      
+      <span className="text-muted-foreground mr-1 text-sm">Catégories :</span>
+
       <Badge
-        className={`cursor-pointer text-sm rounded-sm p-2 m-2 transition-all ${
+        className={cn(
+          "cursor-pointer gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-all",
           activeType === "all"
             ? "bg-primary text-primary-foreground hover:bg-primary/90"
             : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-        }`}
+        )}
         onClick={() => handleToggle("all")}
       >
+        <LayoutGrid className="size-3.5 shrink-0" aria-hidden />
         Tous
       </Badge>
 
@@ -51,16 +55,18 @@ export function TypeChips({ types }: TypeChipsProps) {
         return (
           <Badge
             key={type.value}
-            className={`cursor-pointer text-sm rounded-sm p-2 m-2 transition-all ${
+            className={cn(
+              "cursor-pointer gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-all",
               isActive
-                ? "bg-primary  text-primary-foreground hover:bg-primary/90"
+                ? "bg-primary text-primary-foreground hover:bg-primary/90"
                 : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-            }`}
+            )}
             onClick={() => handleToggle(type.value)}
           >
-            {type.label}
-            <span className="ml-1.5 text-xs opacity-70">({type.count})</span>
-            {isActive && <X className="ml-1 h-3 w-3" />}
+            <MaterielIcon type={type.value} className="size-3.5 shrink-0" />
+            <span>{type.label}</span>
+            <span className="text-xs opacity-70">({type.count})</span>
+            {isActive ? <X className="size-3 shrink-0" aria-hidden /> : null}
           </Badge>
         );
       })}

@@ -8,11 +8,10 @@ import {
 import { nowTimeStr, todayDateStr } from "@/lib/itsm/sla";
 import { employeDisplayName } from "@/lib/utils/employe-matching";
 import { createTicketFromForm } from "@/app/(app)/itsm/actions";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 type Employe = {
   id: string;
@@ -29,14 +28,14 @@ export function ItsmCreateTicketForm({
   employes: Employe[];
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Nouveau ticket</CardTitle>
-        <CardDescription>
-          Saisie manuelle — le retard SLA est calculé automatiquement après 30 jours.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+      <div className="border-b bg-muted/30 px-5 py-4">
+        <h2 className="text-sm font-semibold">Créer un ticket</h2>
+        <p className="text-muted-foreground mt-0.5 text-xs">
+          Saisie agent — SLA auto après 30 jours sans résolution.
+        </p>
+      </div>
+      <div className="px-5 py-5">
         {!canWrite ? (
           <p className="text-muted-foreground text-sm">Accès lecture seule.</p>
         ) : (
@@ -56,14 +55,14 @@ export function ItsmCreateTicketForm({
               />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="employe_id">Demandeur (collaborateur ITAM)</Label>
+              <Label htmlFor="employe_id">Demandeur (collaborateur)</Label>
               <select
                 id="employe_id"
                 name="employe_id"
                 defaultValue=""
                 className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
               >
-                <option value="">— Sélectionner un employé —</option>
+                <option value="">— Sélectionner —</option>
                 {employes.map((e) => (
                   <option key={e.id} value={e.id}>
                     {employeDisplayName(e.prenom, e.nom)}
@@ -169,24 +168,24 @@ export function ItsmCreateTicketForm({
 
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="description">Description</Label>
-              <Input
+              <Textarea
                 id="description"
                 name="description"
+                rows={3}
                 placeholder="Ex. Remplacement souris, reset mot de passe…"
+                className="resize-none"
               />
             </div>
 
             <input type="hidden" name="sous_canal" value="" />
 
-            <div className="flex gap-3 md:col-span-2">
+            <div className="flex flex-wrap items-center gap-3 md:col-span-2">
               <Button type="submit">Créer le ticket</Button>
-              <Badge variant="secondary" className="self-center">
-                SLA auto : 30 jours
-              </Badge>
+              <span className="text-muted-foreground text-xs">SLA automatique · 30 jours</span>
             </div>
           </form>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

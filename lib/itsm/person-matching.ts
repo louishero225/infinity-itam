@@ -33,7 +33,7 @@ function tokenOverlapScore(a: string, b: string) {
   return common / Math.min(ta.size, tb.size);
 }
 
-/** Rapproche un libellé demandeur (ticket) avec un employé ITAM. */
+/** Score incluant format Excel « NOM Prénom(s) » */
 export function matchEmployeFromLabel(label: string, employes: EmployeRef[]) {
   const clean = label.trim();
   if (!clean) return null;
@@ -43,10 +43,12 @@ export function matchEmployeFromLabel(label: string, employes: EmployeRef[]) {
 
   for (const e of employes) {
     const canonical = employeDisplayName(e.prenom, e.nom);
+    const prenomParts = e.prenom.trim().split(/\s+/);
     const variants = [
       canonical,
       `${e.nom} ${e.prenom}`,
-      `${e.prenom} ${e.nom}`.toLowerCase(),
+      `${e.nom} ${prenomParts[prenomParts.length - 1]}`,
+      `${e.nom} ${prenomParts.join(" ")}`,
     ];
 
     for (const v of variants) {
@@ -57,7 +59,8 @@ export function matchEmployeFromLabel(label: string, employes: EmployeRef[]) {
 
     const score = Math.max(
       tokenOverlapScore(clean, canonical),
-      tokenOverlapScore(clean, `${e.nom} ${e.prenom}`)
+      tokenOverlapScore(clean, `${e.nom} ${e.prenom}`),
+      tokenOverlapScore(clean, `${e.nom} ${prenomParts[prenomParts.length - 1]}`)
     );
 
     if (!best || score > best.score) {

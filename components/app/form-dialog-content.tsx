@@ -9,7 +9,7 @@ const sizeClasses = {
   sm: "sm:max-w-lg",
   md: "sm:max-w-2xl max-h-[90vh] overflow-y-auto",
   lg: "sm:max-w-3xl max-h-[90vh] overflow-y-auto",
-  xl: "sm:max-w-4xl max-h-[90vh] overflow-y-auto",
+  xl: "sm:max-w-4xl max-h-[92vh] overflow-y-auto",
 } as const;
 
 export type FormDialogSize = keyof typeof sizeClasses;

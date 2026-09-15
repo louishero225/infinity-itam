@@ -19,6 +19,7 @@ import {
   codeSearchPatternsForPrefix,
   computeNextMaterielCode,
 } from "@/lib/utils/materiel-taxonomy";
+import { normalizeAccessoireSousCategorie } from "@/lib/utils/accessoire-sous-categories";
 
 export async function suggestNextMaterielCode(type: string): Promise<string> {
   const prefix = codePrefixForType(type);
@@ -43,6 +44,7 @@ export async function suggestNextMaterielCode(type: string): Promise<string> {
 export async function createMateriel(input: {
   code_materiel: string;
   type: string;
+  sous_categorie?: string | null;
   marque?: string | null;
   modele?: string | null;
   numero_serie?: string | null;
@@ -69,6 +71,11 @@ export async function createMateriel(input: {
   const statut = input.statut ?? "Stock";
   const code_materiel = normalizeMaterielCode(input.code_materiel);
   const type = normalizeMaterielType(input.type);
+  const sous_categorie =
+    type === "Accessoire"
+      ? normalizeAccessoireSousCategorie(input.sous_categorie) ??
+        (input.sous_categorie?.trim() || null)
+      : null;
   const willAttribute = statut === "Attribué";
 
   if (willAttribute) {
@@ -85,6 +92,7 @@ export async function createMateriel(input: {
     .insert({
       code_materiel,
       type,
+      sous_categorie,
       marque: input.marque ?? null,
       modele: input.modele ?? null,
       numero_serie: input.numero_serie ?? null,
@@ -159,6 +167,7 @@ export async function updateMateriel(input: {
   id: string;
   code_materiel: string;
   type: string;
+  sous_categorie?: string | null;
   marque?: string | null;
   modele?: string | null;
   numero_serie?: string | null;
@@ -183,6 +192,12 @@ export async function updateMateriel(input: {
   const supabase = await createSupabaseServerClient();
 
   const statut = input.statut ?? "Stock";
+  const type = normalizeMaterielType(input.type);
+  const sous_categorie =
+    type === "Accessoire"
+      ? normalizeAccessoireSousCategorie(input.sous_categorie) ??
+        (input.sous_categorie?.trim() || null)
+      : null;
 
   if (statut === "Attribué") {
     validateAttributionBeneficiaire({
@@ -208,7 +223,8 @@ export async function updateMateriel(input: {
     .from("materiels")
     .update({
       code_materiel: normalizeMaterielCode(input.code_materiel),
-      type: normalizeMaterielType(input.type),
+      type,
+      sous_categorie,
       marque: input.marque ?? null,
       modele: input.modele ?? null,
       numero_serie: input.numero_serie ?? null,

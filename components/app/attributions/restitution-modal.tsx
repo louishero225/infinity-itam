@@ -5,7 +5,6 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 
 import { restituerAttribution } from "@/app/(app)/attributions/actions";
 import { FormDialogContent, FormSection } from "@/components/app/form-dialog-content";
@@ -30,7 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { FicheReceptionMateriel } from "./fiche-reception-materiel";
+import { queueRestitutionFiche } from "./restitution-fiche-host";
 
 const DECISION_OPTIONS = [
   {
@@ -108,10 +107,7 @@ export function RestitutionModal({
   materielId: string;
 }) {
   const [open, setOpen] = React.useState(false);
-  const [showFiche, setShowFiche] = React.useState(false);
-  const [ficheData, setFicheData] = React.useState<FicheData | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const router = useRouter();
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -157,42 +153,53 @@ export function RestitutionModal({
         commentaire: values.commentaire || null,
       });
 
-      // Charger les données pour la fiche
-      const response = await fetch(`/api/attributions/${attributionId}/fiche`);
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Préparer la liste des items cochés
-        const itemsCoches = [];
-        if (values.appareil_complet) itemsCoches.push("Appareil complet et fonctionnel");
-        if (values.ecran_intact) itemsCoches.push("Écran intact sans rayures");
-        if (values.clavier_souris) itemsCoches.push("Clavier/Souris fonctionnels");
-        if (values.boitier_intact) itemsCoches.push("Boîtier/Coque sans dommages");
-        if (values.cables_presents) itemsCoches.push("Câbles et chargeur présents");
-        if (values.accessoires_complets) itemsCoches.push("Accessoires complets");
-        if (values.donnees_effacees) itemsCoches.push("Données effacées/formaté");
-        if (values.aucun_logiciel) itemsCoches.push("Aucun logiciel personnel installé");
-        
-        setFicheData({
-          ...data,
-          etat_restitution: values.etat_restitution,
-          commentaire: values.commentaire,
-          date_restitution: new Date().toISOString().split("T")[0],
-          checklist_items: itemsCoches,
-          decision_it: values.decision_it,
-        });
+      const itemsCoches: string[] = [];
+      if (values.appareil_complet) itemsCoches.push("Appareil complet et fonctionnel");
+      if (values.ecran_intact) itemsCoches.push("Écran intact sans rayures");
+      if (values.clavier_souris) itemsCoches.push("Clavier/Souris fonctionnels");
+      if (values.boitier_intact) itemsCoches.push("Boîtier/Coque sans dommages");
+      if (values.cables_presents) itemsCoches.push("Câbles et chargeur présents");
+      if (values.accessoires_complets) itemsCoches.push("Accessoires complets");
+      if (values.donnees_effacees) itemsCoches.push("Données effacées/formaté");
+      if (values.aucun_logiciel) itemsCoches.push("Aucun logiciel personnel installé");
+
+      let data: FicheData = {
+        attribution_id: attributionId,
+        date_attribution: new Date().toISOString().slice(0, 10),
+        date_restitution: new Date().toISOString().slice(0, 10),
+        code_materiel: "—",
+        type_materiel: "—",
+        etat_restitution: values.etat_restitution,
+        commentaire: values.commentaire,
+        beneficiaire_nom: "—",
+        beneficiaire_type: "employe",
+        checklist_items: itemsCoches,
+        decision_it: values.decision_it,
+      };
+
+      try {
+        const response = await fetch(`/api/attributions/${attributionId}/fiche`);
+        if (response.ok) {
+          const apiData = await response.json();
+          data = {
+            ...apiData,
+            etat_restitution: values.etat_restitution,
+            commentaire: values.commentaire,
+            date_restitution:
+              apiData.date_restitution || new Date().toISOString().slice(0, 10),
+            checklist_items: itemsCoches,
+            decision_it: values.decision_it,
+          };
+        }
+      } catch {
+        // Fiche locale minimale si l'API échoue
       }
 
-      toast.success("Restitution enregistrée - Fiche de réception disponible");
       form.reset();
       setOpen(false);
-      
-      // Attendre un court instant avant d'ouvrir la fiche pour éviter les conflits de dialogs
-      setTimeout(() => {
-        setShowFiche(true);
-      }, 300);
-      
-      router.refresh();
+      // Host global : survit au revalidatePath qui démonte la ligne Actif.
+      queueRestitutionFiche(data);
+      toast.success("Restitution enregistrée — fiche prête à imprimer");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur lors de la restitution");
     } finally {
@@ -330,18 +337,6 @@ export function RestitutionModal({
           </Form>
         </FormDialogContent>
       </Dialog>
-
-      {/* Fiche de réception après restitution */}
-      {showFiche && ficheData && (
-        <Dialog open={showFiche} onOpenChange={setShowFiche}>
-          <FormDialogContent size="xl">
-            <DialogHeader>
-              <DialogTitle>Fiche de Réception - Restitution validée</DialogTitle>
-            </DialogHeader>
-            <FicheReceptionMateriel data={ficheData} />
-          </FormDialogContent>
-        </Dialog>
-      )}
     </>
   );
 }

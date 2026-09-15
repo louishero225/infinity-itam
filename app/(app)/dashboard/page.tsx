@@ -9,8 +9,8 @@ import {
   Users,
 } from "lucide-react";
 import { StatCard } from "@/components/app/stat-card";
+import { ItsmStatutBadge } from "@/components/app/itsm/itsm-status";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -23,13 +23,11 @@ import {
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/types/database";
-import { getAccess } from "@/lib/auth/roles";
 import {
   getFaitsMarquantsToday,
   getItsmStats,
   listTickets,
 } from "@/app/(app)/itsm/actions";
-import { redirect } from "next/navigation";
 
 type SyntheseRow = Tables<"v_direction_synthese">;
 
@@ -42,18 +40,7 @@ function formatMoney(value: number | null) {
   }).format(value);
 }
 
-function statutBadgeVariant(statut: string) {
-  if (statut === "Ouvert" || statut === "En cours") return "default" as const;
-  if (statut === "Résolu" || statut === "Fermé") return "secondary" as const;
-  return "outline" as const;
-}
-
 export default async function DashboardPage() {
-  const access = await getAccess().catch(() => null);
-  if (access?.isCollaborateurOnly) {
-    redirect("/mes-demandes");
-  }
-
   let synthese: SyntheseRow | null = null;
   let alertesCount: number | null = 0;
   let stats = { total: 0, ouverts: 0, enRetard: 0, resolus: 0 };
@@ -69,7 +56,7 @@ export default async function DashboardPage() {
         .select("*", { count: "exact", head: true })
         .eq("statut", "active"),
       getItsmStats().catch(() => ({ total: 0, ouverts: 0, enRetard: 0, resolus: 0 })),
-      listTickets().catch(() => []),
+      listTickets(8).catch(() => []),
       getFaitsMarquantsToday().catch(() => ""),
     ]);
     synthese = results[0].data;
@@ -81,7 +68,7 @@ export default async function DashboardPage() {
     // Réseau / auth instable : afficher le dashboard vide plutôt qu'une erreur
   }
 
-  const recentTickets = tickets.slice(0, 8);
+  const recentTickets = tickets;
   const today = new Date().toLocaleDateString("fr-FR", {
     weekday: "long",
     day: "numeric",
@@ -91,48 +78,48 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      {/* Hero accueil */}
-      <section className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-6 py-8 text-white shadow-lg md:px-8 md:py-10">
+      {/* Hero service desk — slate opérationnel (pas de violet AI) */}
+      <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-sky-50/80 px-6 py-7 shadow-sm md:px-8 dark:border-slate-800 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
         <div
-          className="pointer-events-none absolute inset-0 opacity-20"
+          className="pointer-events-none absolute inset-0 opacity-50"
           aria-hidden
           style={{
             backgroundImage:
-              "radial-gradient(circle at 20% 50%, rgb(56 189 248 / 0.4), transparent 50%), radial-gradient(circle at 80% 20%, rgb(99 102 241 / 0.3), transparent 40%)",
+              "radial-gradient(circle at 12% 40%, rgb(14 165 233 / 0.12), transparent 42%), radial-gradient(circle at 88% 20%, rgb(100 116 139 / 0.1), transparent 40%)",
           }}
         />
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-2xl space-y-2">
-            <p className="text-sm font-medium text-slate-300 capitalize">{today}</p>
-            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl space-y-1.5">
+            <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.14em] uppercase">
+              Service Desk · <span className="capitalize">{today}</span>
+            </p>
+            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
               Centre de support IT
             </h1>
-            <p className="text-slate-300 text-sm leading-relaxed md:text-base">
-              Gérez les tickets, le SLA et le parc informatique depuis une seule plateforme.
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              File tickets, SLA et parc — une console unique pour l&apos;équipe IT.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button asChild className="bg-white text-slate-900 hover:bg-slate-100">
+            <Button asChild>
               <Link href="/itsm?tab=nouveau">
                 <Plus className="size-4" />
                 Nouveau ticket
               </Link>
             </Button>
-            <Button asChild variant="secondary" className="bg-white/10 text-white hover:bg-white/20">
-              <Link href="/mes-demandes">
-                Portail demandes
-              </Link>
-            </Button>
-            <Button asChild variant="secondary" className="bg-white/10 text-white hover:bg-white/20">
+            <Button asChild variant="outline">
               <Link href="/itsm">
                 <Ticket className="size-4" />
-                Voir les tickets
+                Console tickets
               </Link>
             </Button>
-            <Button asChild variant="secondary" className="bg-white/10 text-white hover:bg-white/20">
+            <Button asChild variant="outline">
+              <Link href="/mes-demandes">Portail demandes</Link>
+            </Button>
+            <Button asChild variant="ghost">
               <Link href="/materiels">
                 <Laptop className="size-4" />
-                Parc matériel
+                Parc
               </Link>
             </Button>
           </div>
@@ -220,12 +207,14 @@ export default async function DashboardPage() {
                         {t.categorie}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={statutBadgeVariant(t.statut)}>{t.statut}</Badge>
-                        {t.en_retard ? (
-                          <Badge variant="destructive" className="ml-1">
-                            SLA
-                          </Badge>
-                        ) : null}
+                        <div className="flex flex-wrap items-center gap-1">
+                          <ItsmStatutBadge statut={t.statut} />
+                          {t.en_retard ? (
+                            <span className="rounded-md border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200">
+                              SLA
+                            </span>
+                          ) : null}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="sm" asChild>

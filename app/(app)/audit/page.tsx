@@ -1,17 +1,8 @@
-import { redirect } from "next/navigation";
-
 import { PageHeader } from "@/components/app/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { requireAdmin } from "@/lib/auth/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function AuditPage() {
-  try {
-    await requireAdmin();
-  } catch {
-    redirect("/dashboard");
-  }
-
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("audit_log")

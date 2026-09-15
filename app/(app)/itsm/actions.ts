@@ -175,18 +175,28 @@ export async function listDemandeurs() {
 
 export async function getItsmStats() {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.from("tickets").select("statut, en_retard");
 
-  if (error) {
-    return { total: 0, ouverts: 0, enRetard: 0, resolus: 0 };
-  }
+  const [
+    { count: total },
+    { count: ouverts },
+    { count: enCours },
+    { count: enRetard },
+    { count: resolus },
+    { count: fermes },
+  ] = await Promise.all([
+    supabase.from("tickets").select("*", { count: "exact", head: true }),
+    supabase.from("tickets").select("*", { count: "exact", head: true }).eq("statut", "Ouvert"),
+    supabase.from("tickets").select("*", { count: "exact", head: true }).eq("statut", "En cours"),
+    supabase.from("tickets").select("*", { count: "exact", head: true }).eq("en_retard", true),
+    supabase.from("tickets").select("*", { count: "exact", head: true }).eq("statut", "Résolu"),
+    supabase.from("tickets").select("*", { count: "exact", head: true }).eq("statut", "Fermé"),
+  ]);
 
-  const rows = data ?? [];
   return {
-    total: rows.length,
-    ouverts: rows.filter((t) => t.statut === "Ouvert" || t.statut === "En cours").length,
-    enRetard: rows.filter((t) => t.en_retard).length,
-    resolus: rows.filter((t) => t.statut === "Résolu" || t.statut === "Fermé").length,
+    total: total ?? 0,
+    ouverts: (ouverts ?? 0) + (enCours ?? 0),
+    enRetard: enRetard ?? 0,
+    resolus: (resolus ?? 0) + (fermes ?? 0),
   };
 }
 
@@ -217,7 +227,7 @@ export async function saveFaitsMarquants(note: string) {
   revalidatePath("/itsm");
 }
 
-export async function listTickets() {
+export async function listTickets(limit = 200) {
   const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
@@ -225,7 +235,7 @@ export async function listTickets() {
     .select("*")
     .order("date", { ascending: false })
     .order("heure_creation", { ascending: false })
-    .limit(200);
+    .limit(limit);
 
   if (error) throw new Error(error.message);
 
@@ -368,33 +378,59 @@ export async function getTicketDetail(ticketId: string) {
 
   const typedTicket = ticket as IitsmTicket;
 
-  const [{ data: comments, error: commentsError }, { data: history, error: historyError }, pieces, demandeurParc] =
-    await Promise.all([
-      supabase
-        .from("ticket_comments")
-        .select("id, ticket_id, contenu, created_by, created_by_email, created_at")
-        .eq("ticket_id", ticketId)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("audit_log")
-        .select("id, created_at, user_email, action, entity_type, entity_id, details")
-        .eq("entity_type", "tickets")
-        .eq("entity_id", ticketId)
-        .order("created_at", { ascending: false })
-        .limit(50),
-      listPiecesJointes("itsm_ticket", ticketId),
-      getDemandeurParcContext({
-        employeId: typedTicket.employe_id,
-        demandeur: typedTicket.demandeur,
-      }),
-    ]);
+  let comments: Array<{
+    id: string;
+    ticket_id: string;
+    contenu: string;
+    created_by: string | null;
+    created_by_email: string | null;
+    created_at: string;
+    is_internal: boolean;
+  }> = [];
 
-  if (commentsError) throw new Error(commentsError.message);
+  const commentsQuery = await supabase
+    .from("ticket_comments")
+    .select("id, ticket_id, contenu, created_by, created_by_email, created_at, is_internal")
+    .eq("ticket_id", ticketId)
+    .order("created_at", { ascending: true });
+
+  if (commentsQuery.error?.message.includes("is_internal")) {
+    const legacy = await supabase
+      .from("ticket_comments")
+      .select("id, ticket_id, contenu, created_by, created_by_email, created_at")
+      .eq("ticket_id", ticketId)
+      .order("created_at", { ascending: true });
+    if (legacy.error) throw new Error(legacy.error.message);
+    comments = (legacy.data ?? []).map((c) => ({ ...c, is_internal: false }));
+  } else if (commentsQuery.error) {
+    throw new Error(commentsQuery.error.message);
+  } else {
+    comments = (commentsQuery.data ?? []).map((c) => ({
+      ...c,
+      is_internal: Boolean(c.is_internal),
+    }));
+  }
+
+  const [{ data: history, error: historyError }, pieces, demandeurParc] = await Promise.all([
+    supabase
+      .from("audit_log")
+      .select("id, created_at, user_email, action, entity_type, entity_id, details")
+      .eq("entity_type", "tickets")
+      .eq("entity_id", ticketId)
+      .order("created_at", { ascending: false })
+      .limit(50),
+    listPiecesJointes("itsm_ticket", ticketId),
+    getDemandeurParcContext({
+      employeId: typedTicket.employe_id,
+      demandeur: typedTicket.demandeur,
+    }),
+  ]);
+
   if (historyError) throw new Error(historyError.message);
 
   return {
     ticket: typedTicket,
-    comments: comments ?? [],
+    comments,
     pieces,
     history: history ?? [],
     demandeurParc,
@@ -428,6 +464,7 @@ export async function createTicketFromForm(formData: FormData) {
     date,
     heure_creation,
     resolved_at: resolvedIso,
+    priorite: priorite || "Non défini",
   });
 
   const { data, error } = await supabase
@@ -480,18 +517,23 @@ export async function updateTicketFromForm(formData: FormData) {
 
   const statut = String(formData.get("statut") ?? "") as IitsmTicket["statut"];
   const priorite = String(formData.get("priorite") ?? "").trim();
+  const technicien = String(formData.get("technicien") ?? "").trim();
   const resolved_at_str = String(formData.get("resolved_at") ?? "").trim() || null;
   const description = String(formData.get("description") ?? "").trim() || null;
 
   const { data: existing, error: existingError } = await supabase
     .from("tickets")
-    .select("date, heure_creation, resolved_at, statut, priorite, source")
+    .select(
+      "id, ticket_ref, date, heure_creation, resolved_at, statut, priorite, technicien, source, demandeur, categorie, description, employe_id, sous_canal, canal"
+    )
     .eq("id", ticketId)
     .maybeSingle();
 
   if (existingError) throw new Error(existingError.message);
   if (!existing) throw new Error("Ticket introuvable.");
 
+  const nextPriorite = priorite || existing.priorite;
+  const nextStatut = (statut || existing.statut) as IitsmTicket["statut"];
   const resolvedIso = toIsoOrNull(resolved_at_str);
   const en_retard =
     existing.source === "export"
@@ -500,13 +542,15 @@ export async function updateTicketFromForm(formData: FormData) {
           date: existing.date,
           heure_creation: existing.heure_creation,
           resolved_at: resolvedIso,
+          priorite: nextPriorite,
         });
 
   const { error } = await supabase
     .from("tickets")
     .update({
-      statut: statut || existing.statut,
-      priorite: priorite || existing.priorite,
+      statut: nextStatut,
+      priorite: nextPriorite,
+      technicien: technicien || existing.technicien,
       resolved_at: resolvedIso,
       description,
       ...(en_retard !== undefined ? { en_retard } : {}),
@@ -519,11 +563,205 @@ export async function updateTicketFromForm(formData: FormData) {
     action: "ticket.update",
     entityType: "tickets",
     entityId: ticketId,
-    details: { by: access.userId, statut, priorite, en_retard },
+    details: { by: access.userId, statut: nextStatut, priorite: nextPriorite, technicien, en_retard },
   });
+
+  if (nextStatut !== existing.statut) {
+    try {
+      const { notifyRequesterStatusChange } = await import("@/lib/itsm/ticket-email");
+      await notifyRequesterStatusChange({
+        ticket: {
+          id: existing.id,
+          ticket_ref: existing.ticket_ref,
+          demandeur: existing.demandeur,
+          categorie: existing.categorie,
+          statut: nextStatut,
+          priorite: nextPriorite,
+          description: description ?? existing.description,
+          employe_id: existing.employe_id,
+          sous_canal: existing.sous_canal,
+          canal: existing.canal,
+        },
+        fromStatut: existing.statut,
+        toStatut: nextStatut,
+      });
+    } catch {
+      // non bloquant
+    }
+  }
 
   revalidatePath(`/itsm/tickets/${ticketId}`);
   revalidatePath("/itsm");
+}
+
+/** Mise à jour rapide du statut (Kanban). */
+export async function updateTicketStatut(ticketId: string, statut: IitsmTicket["statut"]) {
+  const access = await requireWrite();
+  const supabase = await createSupabaseServerClient();
+  const id = ticketId.trim();
+  if (!id) throw new Error("ticket_id manquant.");
+
+  const { data: existing, error: existingError } = await supabase
+    .from("tickets")
+    .select(
+      "id, ticket_ref, date, heure_creation, resolved_at, statut, priorite, source, demandeur, categorie, description, employe_id, sous_canal, canal"
+    )
+    .eq("id", id)
+    .maybeSingle();
+
+  if (existingError) throw new Error(existingError.message);
+  if (!existing) throw new Error("Ticket introuvable.");
+
+  const closing = statut === "Résolu" || statut === "Fermé";
+  const wasOpen = existing.statut !== "Résolu" && existing.statut !== "Fermé";
+  const resolved_at =
+    closing && wasOpen && !existing.resolved_at
+      ? new Date().toISOString()
+      : !closing
+        ? null
+        : existing.resolved_at;
+
+  const en_retard =
+    existing.source === "export"
+      ? undefined
+      : computeEnRetardSaisie({
+          date: existing.date,
+          heure_creation: existing.heure_creation,
+          resolved_at,
+          priorite: existing.priorite,
+        });
+
+  const { error } = await supabase
+    .from("tickets")
+    .update({
+      statut,
+      resolved_at,
+      ...(en_retard !== undefined ? { en_retard } : {}),
+    })
+    .eq("id", id);
+
+  if (error) throw new Error(error.message);
+
+  await logAudit({
+    action: "ticket.statut",
+    entityType: "tickets",
+    entityId: id,
+    details: { by: access.userId, from: existing.statut, to: statut },
+  });
+
+  if (statut !== existing.statut) {
+    try {
+      const { notifyRequesterStatusChange } = await import("@/lib/itsm/ticket-email");
+      await notifyRequesterStatusChange({
+        ticket: {
+          id: existing.id,
+          ticket_ref: existing.ticket_ref,
+          demandeur: existing.demandeur,
+          categorie: existing.categorie,
+          statut,
+          priorite: existing.priorite,
+          description: existing.description,
+          employe_id: existing.employe_id,
+          sous_canal: existing.sous_canal,
+          canal: existing.canal,
+        },
+        fromStatut: existing.statut,
+        toStatut: statut,
+      });
+    } catch {
+      // non bloquant
+    }
+  }
+
+  revalidatePath(`/itsm/tickets/${id}`);
+  revalidatePath("/itsm");
+  revalidatePath("/dashboard");
+}
+
+/** Assignation rapide d'un ticket. */
+export async function assignTicket(ticketId: string, technicien: string) {
+  const access = await requireWrite();
+  const supabase = await createSupabaseServerClient();
+  const id = ticketId.trim();
+  const tech = technicien.trim() || "Non assigné";
+  if (!id) throw new Error("ticket_id manquant.");
+
+  const { error } = await supabase.from("tickets").update({ technicien: tech }).eq("id", id);
+  if (error) throw new Error(error.message);
+
+  await logAudit({
+    action: "ticket.assign",
+    entityType: "tickets",
+    entityId: id,
+    details: { by: access.userId, technicien: tech },
+  });
+
+  revalidatePath(`/itsm/tickets/${id}`);
+  revalidatePath("/itsm");
+  revalidatePath("/dashboard");
+}
+
+/** Actions en masse (statut et/ou assignation). */
+export async function bulkUpdateTickets(args: {
+  ticketIds: string[];
+  statut?: IitsmTicket["statut"];
+  technicien?: string;
+}) {
+  const access = await requireWrite();
+  const supabase = await createSupabaseServerClient();
+  const ids = [...new Set(args.ticketIds.map((id) => id.trim()).filter(Boolean))].slice(0, 100);
+  if (ids.length === 0) throw new Error("Aucun ticket sélectionné.");
+
+  const { data: rows, error: loadError } = await supabase
+    .from("tickets")
+    .select("id, date, heure_creation, resolved_at, statut, priorite, source")
+    .in("id", ids);
+
+  if (loadError) throw new Error(loadError.message);
+
+  let updated = 0;
+  for (const row of rows ?? []) {
+    const patch: Record<string, unknown> = {};
+    if (args.technicien !== undefined) {
+      patch.technicien = args.technicien.trim() || "Non assigné";
+    }
+    if (args.statut) {
+      const closing = args.statut === "Résolu" || args.statut === "Fermé";
+      const wasOpen = row.statut !== "Résolu" && row.statut !== "Fermé";
+      patch.statut = args.statut;
+      if (closing && wasOpen && !row.resolved_at) {
+        patch.resolved_at = new Date().toISOString();
+      } else if (!closing) {
+        patch.resolved_at = null;
+      }
+      if (row.source !== "export") {
+        patch.en_retard = computeEnRetardSaisie({
+          date: row.date,
+          heure_creation: row.heure_creation,
+          resolved_at: (patch.resolved_at as string | null | undefined) ?? row.resolved_at,
+          priorite: row.priorite,
+        });
+      }
+    }
+    if (Object.keys(patch).length === 0) continue;
+    const { error } = await supabase.from("tickets").update(patch).eq("id", row.id);
+    if (!error) updated++;
+  }
+
+  await logAudit({
+    action: "ticket.bulk",
+    entityType: "tickets",
+    details: {
+      by: access.userId,
+      count: updated,
+      statut: args.statut,
+      technicien: args.technicien,
+    },
+  });
+
+  revalidatePath("/itsm");
+  revalidatePath("/dashboard");
+  return { updated };
 }
 
 export async function addTicketCommentFromForm(formData: FormData) {
@@ -536,21 +774,59 @@ export async function addTicketCommentFromForm(formData: FormData) {
   const contenu = String(formData.get("contenu") ?? "").trim();
   if (!contenu) throw new Error("Commentaire vide.");
 
+  const is_internal =
+    formData.get("is_internal") === "on" ||
+    formData.get("is_internal") === "true" ||
+    formData.get("is_internal") === "1";
+
+  const { data: ticketRow, error: ticketError } = await supabase
+    .from("tickets")
+    .select(
+      "id, ticket_ref, demandeur, categorie, statut, priorite, description, employe_id, sous_canal, canal"
+    )
+    .eq("id", ticketId)
+    .maybeSingle();
+
+  if (ticketError) throw new Error(ticketError.message);
+  if (!ticketRow) throw new Error("Ticket introuvable.");
+
   const { error } = await supabase.from("ticket_comments").insert({
     ticket_id: ticketId,
     contenu,
+    is_internal,
     created_by: access.userId,
     created_by_email: access.email ?? null,
   });
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (error.message.includes("is_internal")) {
+      throw new Error(
+        "Colonne is_internal absente — appliquez la migration 20260821_10_ticket_comments_internal.sql"
+      );
+    }
+    throw new Error(error.message);
+  }
 
   await logAudit({
-    action: "ticket.comment.add",
+    action: is_internal ? "ticket.comment.internal" : "ticket.comment.add",
     entityType: "tickets",
     entityId: ticketId,
-    details: { by: access.userId },
+    details: { by: access.userId, is_internal },
   });
+
+  // Note interne : pas d'e-mail au demandeur
+  if (!is_internal) {
+    try {
+      const { notifyRequesterPublicComment } = await import("@/lib/itsm/ticket-email");
+      await notifyRequesterPublicComment({
+        ticket: ticketRow,
+        comment: contenu,
+        authorEmail: access.email,
+      });
+    } catch {
+      // Ne bloque pas la publication si Resend échoue
+    }
+  }
 
   revalidatePath(`/itsm/tickets/${ticketId}`);
   revalidatePath("/itsm");
@@ -629,6 +905,7 @@ export async function generateOnboardingTickets(formData: FormData) {
       date: dateStr,
       heure_creation: step.heure,
       resolved_at: null,
+      priorite: "Normal",
     });
 
     return {

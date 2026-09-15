@@ -103,7 +103,7 @@ export function AttributionsTable({ rows }: { rows: AttributionRow[] }) {
           header: "Actions",
           sortable: false,
           cell: (r) =>
-            r.materiel ? (
+            r.materiel && r.statut === "Actif" ? (
               <RestitutionModal attributionId={r.id} materielId={r.materiel.id} />
             ) : null,
         },

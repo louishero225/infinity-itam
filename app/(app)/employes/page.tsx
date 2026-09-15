@@ -11,8 +11,9 @@ import { OnboardingDialog } from "@/components/app/attributions/onboarding-dialo
 import { TablePagination } from "@/components/app/table-pagination";
 import { Suspense } from "react";
 
-type EmployeWithAttributions = Tables<"employes"> & {
-  attributions?: { id: string; statut: string | null }[];
+type EmployeRow = Tables<"employes"> & {
+  materiel_count: number;
+  materiel_actif: number;
 };
 
 const PAGE_SIZE = 25;
@@ -28,29 +29,38 @@ export default async function EmployesPage(props: {
   const searchParams = await props.searchParams;
   const supabase = await createSupabaseServerClient();
 
-  const departementFilter = typeof searchParams?.departement === "string" ? searchParams.departement : null;
+  const departementFilter =
+    typeof searchParams?.departement === "string" ? searchParams.departement : null;
   const page = parsePage(searchParams?.page);
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
 
-  const [employesResult, materielsResult] = await Promise.all([
-    supabase
-      .from("employes")
-      .select(`
-        *,
-        attributions!employe_id (
-          id,
-          statut
-        )
-      `)
-      .order("created_at", { ascending: false }),
+  let listQuery = supabase
+    .from("employes")
+    .select("*", { count: "exact" })
+    .order("created_at", { ascending: false });
+
+  if (departementFilter && departementFilter !== "all") {
+    listQuery = listQuery.eq("departement", departementFilter);
+  }
+
+  const [
+    { data: pageEmployes, error, count: filteredCount },
+    { data: deptRows },
+    { data: actifs },
+    { data: materiels },
+    { data: employesOptions },
+  ] = await Promise.all([
+    listQuery.range(from, to),
+    supabase.from("employes").select("departement"),
+    supabase.from("attributions").select("employe_id").eq("statut", "Actif").not("employe_id", "is", null),
     supabase
       .from("materiels")
       .select("id, code_materiel, type, marque, modele")
       .eq("statut", "Stock")
       .order("code_materiel"),
+    supabase.from("employes").select("id, prenom, nom, departement").order("prenom"),
   ]);
-
-  const { data, error } = employesResult;
-  const materiels = materielsResult.data;
 
   if (error) {
     return (
@@ -61,20 +71,23 @@ export default async function EmployesPage(props: {
     );
   }
 
-  const allEmployes = (data ?? []).map((emp: EmployeWithAttributions) => ({
-    ...emp,
-    materiel_count: emp.attributions?.length ?? 0,
-    materiel_actif: emp.attributions?.filter((a) => a.statut === "Actif")?.length ?? 0,
-  }));
+  const actifsByEmploye = new Map<string, number>();
+  for (const row of actifs ?? []) {
+    if (!row.employe_id) continue;
+    actifsByEmploye.set(row.employe_id, (actifsByEmploye.get(row.employe_id) ?? 0) + 1);
+  }
 
-  const rows =
-    departementFilter && departementFilter !== "all"
-      ? allEmployes.filter((e) => e.departement === departementFilter)
-      : allEmployes;
+  const pagedRows: EmployeRow[] = (pageEmployes ?? []).map((emp) => {
+    const actif = actifsByEmploye.get(emp.id) ?? 0;
+    return {
+      ...emp,
+      materiel_count: actif,
+      materiel_actif: actif,
+    };
+  });
 
-  const pagedRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  const deptCounts = allEmployes.reduce(
+  const allDept = deptRows ?? [];
+  const deptCounts = allDept.reduce(
     (acc, e) => {
       const dept = e.departement || "Non renseigné";
       acc[dept] = (acc[dept] || 0) + 1;
@@ -84,14 +97,16 @@ export default async function EmployesPage(props: {
   );
 
   const topDepartements = Object.entries(deptCounts)
-    .sort((a, b) => (b[1] as number) - (a[1] as number))
+    .sort((a, b) => b[1] - a[1])
     .slice(0, 4);
 
+  const avecMateriel = [...actifsByEmploye.keys()].length;
+  const total = allDept.length;
   const stats = {
-    total: allEmployes.length,
-    avecMateriel: allEmployes.filter((e) => e.materiel_actif > 0).length,
-    sansMateriel: allEmployes.filter((e) => e.materiel_actif === 0).length,
-    totalMaterielAttribue: allEmployes.reduce((sum, e) => sum + (e.materiel_actif || 0), 0),
+    total,
+    avecMateriel,
+    sansMateriel: Math.max(0, total - avecMateriel),
+    totalMaterielAttribue: [...actifsByEmploye.values()].reduce((s, n) => s + n, 0),
   };
 
   return (
@@ -102,7 +117,7 @@ export default async function EmployesPage(props: {
         actions={
           <>
             <EmployeFormDialog />
-            <OnboardingDialog materiels={materiels ?? []} employes={allEmployes} />
+            <OnboardingDialog materiels={materiels ?? []} employes={employesOptions ?? []} />
           </>
         }
       />
@@ -147,14 +162,14 @@ export default async function EmployesPage(props: {
                 {dept} <span className="ml-1 text-xs opacity-70">({String(count)})</span>
               </Link>
             ))}
-            {departementFilter && departementFilter !== "all" && (
+            {departementFilter && departementFilter !== "all" ? (
               <Link
                 href="/employes"
                 className="rounded-md bg-muted px-3 py-2 text-sm font-medium transition-colors duration-200 hover:bg-muted/80"
               >
                 Réinitialiser
               </Link>
-            )}
+            ) : null}
           </div>
         </CardContent>
       </Card>
@@ -166,7 +181,11 @@ export default async function EmployesPage(props: {
         <CardContent>
           <EmployesTable rows={pagedRows} />
           <Suspense fallback={null}>
-            <TablePagination page={page} pageSize={PAGE_SIZE} totalCount={rows.length} />
+            <TablePagination
+              page={page}
+              pageSize={PAGE_SIZE}
+              totalCount={filteredCount ?? pagedRows.length}
+            />
           </Suspense>
         </CardContent>
       </Card>

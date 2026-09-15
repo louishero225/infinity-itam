@@ -1,19 +1,13 @@
-import { redirect } from "next/navigation";
 import { getDuplicateEmployeGroups } from "@/app/(app)/employes/actions";
 import { listAdminUsers } from "@/app/(app)/administration/users-actions";
 import { AdministrationPanel } from "@/components/app/administration/administration-panel";
 import { PageHeader } from "@/components/app/page-header";
 import { StatCard } from "@/components/app/stat-card";
-import { requireAdmin } from "@/lib/auth/roles";
+import { getAccess } from "@/lib/auth/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function AdministrationPage() {
-  let access;
-  try {
-    access = await requireAdmin();
-  } catch {
-    redirect("/dashboard");
-  }
+  const access = await getAccess();
 
   let users: Awaited<ReturnType<typeof listAdminUsers>> = [];
   let duplicateGroups: Awaited<ReturnType<typeof getDuplicateEmployeGroups>> = [];

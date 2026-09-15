@@ -1,4 +1,6 @@
 import * as React from "react";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 import { AccessProvider } from "@/components/app/access-provider";
 import { AppBrand } from "@/components/app/app-brand";
@@ -7,21 +9,32 @@ import { LogoutButton } from "@/components/app/logout-button";
 import { MobileNav } from "@/components/app/mobile-nav";
 import { SidebarNav } from "@/components/app/sidebar";
 import { ThemeToggle } from "@/components/app/theme-toggle";
+import { RestitutionFicheHost } from "@/components/app/attributions/restitution-fiche-host";
 import { APP_NAME } from "@/lib/navigation";
 import { getAccess } from "@/lib/auth/roles";
-import type { RoleCode } from "@/lib/auth/role-types";
+import { isAdminRoute, isStaffRoute } from "@/lib/auth/staff-routes";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const access = await getAccess().catch(() => ({
-    canWrite: true,
-    canAdmin: true,
-    canRequestTicket: true,
-    isStaff: true,
-    isCollaborateurOnly: false,
-    roles: ["admin", "itam"] as RoleCode[],
-    userId: "",
-    email: null as string | null,
-  }));
+  const pathname = (await headers()).get("x-pathname") ?? "";
+
+  // Un seul getAccess() (mis en cache React) pour toute la requête.
+  let access;
+  try {
+    access = await getAccess();
+  } catch {
+    redirect("/login");
+  }
+
+  if (isAdminRoute(pathname) && !access.canAdmin) {
+    redirect("/dashboard");
+  }
+
+  if (
+    isStaffRoute(pathname) &&
+    (access.isCollaborateurOnly || (!access.isStaff && !access.canAdmin))
+  ) {
+    redirect("/mes-demandes");
+  }
 
   const value = {
     canWrite: access.canWrite,
@@ -57,6 +70,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               </div>
             </header>
             <main className="p-4 md:p-6">{children}</main>
+            <RestitutionFicheHost />
           </div>
         </div>
       </div>

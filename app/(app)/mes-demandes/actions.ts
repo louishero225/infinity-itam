@@ -144,6 +144,7 @@ export async function createDemandeFromForm(formData: FormData) {
   const description = String(formData.get("description") ?? "").trim();
   const entiteRaw = String(formData.get("entite") ?? "").trim();
   const priorite = String(formData.get("priorite") ?? "Normal").trim() || "Normal";
+  const catalog_id = String(formData.get("catalog_id") ?? "").trim() || null;
 
   if (!description) {
     throw new Error("Décrivez votre besoin.");
@@ -168,6 +169,7 @@ export async function createDemandeFromForm(formData: FormData) {
     date,
     heure_creation,
     resolved_at: null,
+    priorite,
   });
 
   const payload: Record<string, unknown> = {
@@ -201,28 +203,64 @@ export async function createDemandeFromForm(formData: FormData) {
       delete payload.employe_id;
       const retry = await supabase.from("tickets").insert(payload).select("id").maybeSingle();
       if (retry.error) throw new Error(retry.error.message);
-      await finalizeDemande(retry.data?.id ?? null, access, demandeur);
+      await finalizeDemande(retry.data?.id ?? null, access, demandeur, catalog_id, {
+        categorie,
+        priorite,
+        description,
+      });
       redirect("/mes-demandes?created=1");
     }
     throw new Error(error.message);
   }
 
-  await finalizeDemande(data?.id ?? null, access, demandeur);
+  await finalizeDemande(data?.id ?? null, access, demandeur, catalog_id, {
+    categorie,
+    priorite,
+    description,
+  });
   redirect("/mes-demandes?created=1");
 }
 
 async function finalizeDemande(
   ticketId: string | null,
   access: Awaited<ReturnType<typeof getAccess>>,
-  demandeur: string
+  demandeur: string,
+  catalogId?: string | null,
+  meta?: {
+    categorie: string;
+    priorite: string;
+    description: string;
+  }
 ) {
   if (ticketId) {
     await logAudit({
       action: "ticket.portail.create",
       entityType: "tickets",
       entityId: ticketId,
-      details: { by: access.userId, email: access.email, demandeur },
+      details: {
+        by: access.userId,
+        email: access.email,
+        demandeur,
+        catalog_id: catalogId,
+      },
     });
+
+    if (meta) {
+      try {
+        const { notifyStaffNewPortalTicket } = await import("@/lib/itsm/ticket-email");
+        await notifyStaffNewPortalTicket({
+          ticketId,
+          ticketRef: null,
+          demandeur,
+          categorie: meta.categorie,
+          priorite: meta.priorite,
+          description: meta.description,
+          contactEmail: access.email,
+        });
+      } catch {
+        // non bloquant
+      }
+    }
   }
   revalidatePath("/mes-demandes");
   revalidatePath("/itsm");

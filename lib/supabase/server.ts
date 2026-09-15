@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
@@ -18,7 +19,8 @@ function getSupabaseEnv() {
   return { url, anonKey };
 }
 
-export async function createSupabaseServerClient() {
+/** Un client Supabase par requête RSC (évite de recréer cookies/auth partout). */
+export const createSupabaseServerClient = cache(async () => {
   const { url, anonKey } = getSupabaseEnv();
 
   const cookieStore = await cookies();
@@ -39,4 +41,4 @@ export async function createSupabaseServerClient() {
       },
     },
   });
-}
+});

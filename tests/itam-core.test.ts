@@ -6,6 +6,7 @@ import {
   normalizeMaterielType,
   parseMaterielCodeSequence,
 } from "@/lib/utils/materiel-taxonomy";
+import { normalizeAccessoireSousCategorie } from "@/lib/utils/accessoire-sous-categories";
 import { shouldUseAttributionDirectFallback } from "@/lib/server/create-attribution-transaction";
 import { normalizeMaterielStatut } from "@/lib/materiel/statuts";
 
@@ -14,6 +15,29 @@ describe("nomenclature matériel", () => {
     expect(normalizeMaterielType("Téléphone")).toBe("Smartphone");
   });
 
+  it("normalise Accessoire et aliases", () => {
+    expect(normalizeMaterielType("Accessoire")).toBe("Accessoire");
+    expect(normalizeMaterielType("souris")).toBe("Accessoire");
+    expect(normalizeMaterielType("Chargeur")).toBe("Accessoire");
+  });
+
+  it("préfixe IAG-ACC pour Accessoire", () => {
+    expect(computeNextMaterielCode([], "IAG-ACC")).toBe("IAG-ACC-001");
+    expect(computeNextMaterielCode(["IAG-ACC-001", "IAG-ACC-012"], "IAG-ACC")).toBe(
+      "IAG-ACC-013"
+    );
+  });
+});
+
+describe("sous-catégories accessoires", () => {
+  it("normalise les alias", () => {
+    expect(normalizeAccessoireSousCategorie("souris")).toBe("Souris");
+    expect(normalizeAccessoireSousCategorie("Hub")).toBe("Hub / Dock");
+    expect(normalizeAccessoireSousCategorie("chargeur")).toBe("Chargeur");
+  });
+});
+
+describe("nomenclature matériel suite", () => {
   it("normalise un code legacy", () => {
     expect(normalizeMaterielCode("TEL-049")).toBe("IAG-TEL-049");
   });

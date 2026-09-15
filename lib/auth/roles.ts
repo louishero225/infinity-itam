@@ -1,5 +1,8 @@
 import "server-only";
 
+import { cache } from "react";
+import { redirect } from "next/navigation";
+
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   canRequestTicket,
@@ -22,14 +25,20 @@ export type Access = {
   isCollaborateurOnly: boolean;
 };
 
-export async function getAccess(): Promise<Access> {
+/** Une seule résolution d'accès par requête RSC (évite 2–3 appels auth/rôles). */
+export const getAccess = cache(async (): Promise<Access> => {
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
+  let user = null as { id: string; email?: string | null } | null;
 
-  if (error || !user) {
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    user = sessionData.session?.user ?? null;
+  } else {
+    user = data.user;
+  }
+
+  if (!user) {
     throw new Error("Non authentifié");
   }
 
@@ -49,8 +58,6 @@ export async function getAccess(): Promise<Access> {
     }
   }
 
-  // Sans rôle en base : portail collaborateur uniquement.
-  // Les admins / IT doivent avoir un rôle explicite (Administration).
   if (roles.length === 0) {
     return {
       userId: user.id,
@@ -79,7 +86,7 @@ export async function getAccess(): Promise<Access> {
     isStaff,
     isCollaborateurOnly,
   };
-}
+});
 
 export async function requireWrite() {
   const access = await getAccess();
@@ -101,6 +108,28 @@ export async function requireTicketRequest() {
   const access = await getAccess();
   if (!access.canRequestTicket) {
     throw new Error("Vous n'êtes pas autorisé à créer une demande.");
+  }
+  return access;
+}
+
+/** Pages réservées au staff ITAM / IT (parc, tickets, flotte…). */
+export async function getStaffAccess(): Promise<Access> {
+  try {
+    const access = await getAccess();
+    if (access.isCollaborateurOnly || (!access.isStaff && !access.canAdmin)) {
+      redirect("/mes-demandes");
+    }
+    return access;
+  } catch {
+    redirect("/login");
+  }
+}
+
+/** Pages réservées aux administrateurs. */
+export async function getAdminAccess(): Promise<Access> {
+  const access = await getStaffAccess();
+  if (!access.canAdmin) {
+    redirect("/dashboard");
   }
   return access;
 }

@@ -12,6 +12,11 @@ import { EntiteSelect } from "@/components/app/beneficiaire/entite-select";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { uploadMaterielPhoto } from "@/lib/supabase/storage";
 import { MATERIEL_TYPES, codePrefixForType } from "@/lib/utils/materiel-taxonomy";
+import { MaterielIcon } from "@/lib/utils/materiel-icons";
+import {
+  ACCESSOIRE_SOUS_CATEGORIES,
+  AccessoireSousIcon,
+} from "@/lib/utils/accessoire-sous-categories";
 import Image from "next/image";
 import { Upload, X } from "lucide-react";
 import { FormDialogContent } from "@/components/app/form-dialog-content";
@@ -52,6 +57,7 @@ const schema = z
   .object({
     code_materiel: z.string().min(1),
     type: z.string().min(1),
+    sous_categorie: z.string().optional(),
     marque: z.string().optional(),
     modele: z.string().optional(),
     numero_serie: z.string().optional(),
@@ -82,6 +88,14 @@ const schema = z
     photo_url: z.string().optional(),
   })
   .superRefine((values, ctx) => {
+    if (values.type === "Accessoire" && !values.sous_categorie?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["sous_categorie"],
+        message: "Choisissez une sous-catégorie d'accessoire.",
+      });
+    }
+
     if (values.statut !== "Attribué") return;
 
     const bt = values.beneficiaire_type ?? "employe";
@@ -278,6 +292,7 @@ export function MaterielFormDialog({
     form.reset({
       code_materiel: initialValues.code_materiel ?? "",
       type: initialValues.type ?? "",
+      sous_categorie: initialValues.sous_categorie ?? undefined,
       marque: initialValues.marque ?? undefined,
       modele: initialValues.modele ?? undefined,
       numero_serie: initialValues.numero_serie ?? undefined,
@@ -310,6 +325,7 @@ export function MaterielFormDialog({
           id: initialValues.id,
           code_materiel: values.code_materiel,
           type: values.type,
+          sous_categorie: values.sous_categorie || null,
           marque: values.marque || null,
           modele: values.modele || null,
           numero_serie: values.numero_serie || null,
@@ -345,6 +361,7 @@ export function MaterielFormDialog({
         await createMateriel({
           code_materiel: values.code_materiel,
           type: values.type,
+          sous_categorie: values.sous_categorie || null,
           marque: values.marque || null,
           modele: values.modele || null,
           numero_serie: values.numero_serie || null,
@@ -401,25 +418,95 @@ export function MaterielFormDialog({
           {triggerLabel ?? (mode === "edit" ? "Modifier" : "Ajouter")}
         </Button>
       </DialogTrigger>
-      <FormDialogContent size="lg">
-        <DialogHeader>
-          <DialogTitle>{mode === "edit" ? "Modifier matériel" : "Nouveau matériel"}</DialogTitle>
-          <DialogDescription>
-            Ajoutez un matériel au parc (inventaire, informations techniques, statut).
+      <FormDialogContent
+        size="xl"
+        className="gap-3 overflow-hidden p-4 sm:max-w-5xl max-h-[min(92vh,880px)]"
+      >
+        <DialogHeader className="space-y-1 pr-6">
+          <DialogTitle className="text-base">
+            {mode === "edit" ? "Modifier matériel" : "Nouveau matériel"}
+          </DialogTitle>
+          <DialogDescription className="text-xs">
+            Inventaire, statut et attribution — champs secondaires en option.
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
-            <div className="grid gap-4 sm:grid-cols-2">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="grid gap-2.5"
+          >
+            <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem className="gap-1">
+                    <FormLabel className="text-xs">Type</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger className="h-9 w-full">
+                          <SelectValue placeholder="Choisir un type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {TYPE_OPTIONS.map((t) => (
+                          <SelectItem key={t} value={t}>
+                            <span className="inline-flex items-center gap-2">
+                              <MaterielIcon type={t} className="size-3.5 text-muted-foreground" />
+                              {t}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {watchedType === "Accessoire" ? (
+                <FormField
+                  control={form.control}
+                  name="sous_categorie"
+                  render={({ field }) => (
+                    <FormItem className="gap-1">
+                      <FormLabel className="text-xs">Sous-catégorie</FormLabel>
+                      <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger className="h-9 w-full">
+                            <SelectValue placeholder="Souris, chargeur…" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {ACCESSOIRE_SOUS_CATEGORIES.map((s) => (
+                            <SelectItem key={s} value={s}>
+                              <span className="inline-flex items-center gap-2">
+                                <AccessoireSousIcon
+                                  sous={s}
+                                  className="size-3.5 text-muted-foreground"
+                                />
+                                {s}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : null}
+
               <FormField
                 control={form.control}
                 name="code_materiel"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Code matériel</FormLabel>
+                  <FormItem className="gap-1">
+                    <FormLabel className="text-xs">Code matériel</FormLabel>
                     <FormControl>
                       <Input
+                        className="h-9"
                         placeholder={codePlaceholder}
                         {...field}
                         onChange={(event) => {
@@ -430,54 +517,24 @@ export function MaterielFormDialog({
                         }}
                       />
                     </FormControl>
-                    {mode === "create" && watchedType ? (
-                      <FormDescription>
-                        {loadingSuggestedCode
-                          ? "Calcul du prochain code..."
-                          : suggestedCode
-                            ? `Code proposé : ${suggestedCode}`
-                            : `Format attendu : ${codePrefixForType(watchedType)}-XXX`}
+                    {mode === "create" && watchedType && suggestedCode ? (
+                      <FormDescription className="text-[10px] leading-tight">
+                        Proposé : {suggestedCode}
                       </FormDescription>
                     ) : null}
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Type</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Choisir un type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {TYPE_OPTIONS.map((t) => (
-                          <SelectItem key={t} value={t}>
-                            {t}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="marque"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Marque</FormLabel>
+                  <FormItem className="gap-1">
+                    <FormLabel className="text-xs">Marque</FormLabel>
                     <FormControl>
-                      <Input placeholder="HP" {...field} />
+                      <Input className="h-9" placeholder="HP" {...field} />
                     </FormControl>
                   </FormItem>
                 )}
@@ -486,80 +543,36 @@ export function MaterielFormDialog({
                 control={form.control}
                 name="modele"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Modèle</FormLabel>
+                  <FormItem className="gap-1">
+                    <FormLabel className="text-xs">Modèle</FormLabel>
                     <FormControl>
-                      <Input placeholder="Elitebook 840 G5" {...field} />
+                      <Input className="h-9" placeholder="Elitebook 840" {...field} />
                     </FormControl>
                   </FormItem>
                 )}
               />
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="numero_serie"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>N° série</FormLabel>
+                  <FormItem className="gap-1">
+                    <FormLabel className="text-xs">N° série</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input className="h-9" {...field} />
                     </FormControl>
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="nom_device"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nom device</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="adresse_mac"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>MAC</FormLabel>
-                    <FormControl>
-                      <Input placeholder="AA:BB:CC:DD:EE:FF" {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="adresse_ip"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>IP</FormLabel>
-                    <FormControl>
-                      <Input placeholder="192.168.1.10" {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="etat"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>État</FormLabel>
+                  <FormItem className="gap-1">
+                    <FormLabel className="text-xs">État</FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="h-9 w-full">
                           <SelectValue placeholder="Choisir" />
                         </SelectTrigger>
                       </FormControl>
@@ -579,11 +592,11 @@ export function MaterielFormDialog({
                 control={form.control}
                 name="statut"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Statut</FormLabel>
+                  <FormItem className="gap-1">
+                    <FormLabel className="text-xs">Statut</FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="h-9 w-full">
                           <SelectValue placeholder="Choisir" />
                         </SelectTrigger>
                       </FormControl>
@@ -602,64 +615,105 @@ export function MaterielFormDialog({
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="salle"
+                render={({ field }) => (
+                  <FormItem className="gap-1">
+                    <FormLabel className="text-xs">Salle / localisation</FormLabel>
+                    <FormControl>
+                      <Input className="h-9" placeholder="Bureau 205" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="date_achat"
+                render={({ field }) => (
+                  <FormItem className="gap-1">
+                    <FormLabel className="text-xs">Date d&apos;achat</FormLabel>
+                    <FormControl>
+                      <Input className="h-9" type="date" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="cout"
+                render={({ field }) => (
+                  <FormItem className="gap-1">
+                    <FormLabel className="text-xs">Coût (FCFA)</FormLabel>
+                    <FormControl>
+                      <Input className="h-9" inputMode="decimal" placeholder="0" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="nom_device"
+                render={({ field }) => (
+                  <FormItem className="gap-1">
+                    <FormLabel className="text-xs">Nom device</FormLabel>
+                    <FormControl>
+                      <Input className="h-9" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
             </div>
 
-            {statut === "Attribué" && (
-              <div className="grid gap-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="beneficiaire_type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Bénéficiaire</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <FormControl>
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Choisir" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="employe">Personne (employé)</SelectItem>
-                            <SelectItem value="departement">Département / entité</SelectItem>
-                            <SelectItem value="societe">Société</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="date_attribution"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Date d&apos;attribution</FormLabel>
+            {statut === "Attribué" ? (
+              <div className="bg-muted/40 grid gap-2.5 rounded-md border p-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                <FormField
+                  control={form.control}
+                  name="beneficiaire_type"
+                  render={({ field }) => (
+                    <FormItem className="gap-1">
+                      <FormLabel className="text-xs">Bénéficiaire</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <SelectTrigger className="h-9 w-full">
+                            <SelectValue placeholder="Choisir" />
+                          </SelectTrigger>
                         </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
+                        <SelectContent>
+                          <SelectItem value="employe">Personne (employé)</SelectItem>
+                          <SelectItem value="departement">Département / entité</SelectItem>
+                          <SelectItem value="societe">Société</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="date_attribution"
+                  render={({ field }) => (
+                    <FormItem className="gap-1">
+                      <FormLabel className="text-xs">Date d&apos;attribution</FormLabel>
+                      <FormControl>
+                        <Input className="h-9" type="date" {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
                 {beneficiaireType === "employe" ? (
                   <FormField
                     control={form.control}
                     name="employe_id"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Employé</FormLabel>
+                      <FormItem className="gap-1 sm:col-span-2 lg:col-span-1">
+                        <FormLabel className="text-xs">Employé</FormLabel>
                         <Select value={field.value} onValueChange={field.onChange}>
                           <FormControl>
-                            <SelectTrigger className="w-full" disabled={loadingEmployes}>
+                            <SelectTrigger className="h-9 w-full" disabled={loadingEmployes}>
                               <SelectValue
-                                placeholder={
-                                  loadingEmployes
-                                    ? "Chargement..."
-                                    : "Choisir un employé"
-                                }
+                                placeholder={loadingEmployes ? "Chargement…" : "Choisir"}
                               />
                             </SelectTrigger>
                           </FormControl>
@@ -680,9 +734,9 @@ export function MaterielFormDialog({
                     control={form.control}
                     name="entite_id"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          {beneficiaireType === "societe" ? "Société" : "Département / entité"}
+                      <FormItem className="gap-1 sm:col-span-2 lg:col-span-1">
+                        <FormLabel className="text-xs">
+                          {beneficiaireType === "societe" ? "Société" : "Département"}
                         </FormLabel>
                         <FormControl>
                           <EntiteSelect
@@ -701,129 +755,125 @@ export function MaterielFormDialog({
                   />
                 )}
               </div>
-            )}
+            ) : null}
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="date_achat"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Date d&apos;achat</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="cout"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Coût (FCFA)</FormLabel>
-                    <FormControl>
-                      <Input inputMode="decimal" placeholder="0" {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="salle"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Salle / Localisation</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Bâtiment A - Étage 2 - Bureau 205" {...field} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <div>
-              <FormLabel>Photo du matériel</FormLabel>
-              <div className="mt-2 flex flex-col gap-3">
-                {photoPreview && (
-                  <div className="relative w-32 h-32 border rounded-lg overflow-hidden">
-                    <Image
-                      src={photoPreview}
-                      alt="Aperçu"
-                      fill
-                      unoptimized
-                      className="object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPhotoPreview(null);
-                        form.setValue("photo_url", undefined);
-                      }}
-                      className="absolute top-1 right-1 bg-destructive text-white rounded-full p-1 hover:bg-destructive/90"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
+            <details className="group rounded-md border">
+              <summary className="text-muted-foreground hover:text-foreground cursor-pointer list-none px-3 py-2 text-xs font-medium select-none [&::-webkit-details-marker]:hidden">
+                <span className="inline-flex items-center gap-1.5">
+                  Détails optionnels
+                  <span className="text-[10px] font-normal opacity-70">
+                    (MAC, IP, photo, observations)
+                  </span>
+                </span>
+              </summary>
+              <div className="grid gap-2.5 border-t p-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                <FormField
+                  control={form.control}
+                  name="adresse_mac"
+                  render={({ field }) => (
+                    <FormItem className="gap-1">
+                      <FormLabel className="text-xs">MAC</FormLabel>
+                      <FormControl>
+                        <Input className="h-9" placeholder="AA:BB:CC:DD:EE:FF" {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="adresse_ip"
+                  render={({ field }) => (
+                    <FormItem className="gap-1">
+                      <FormLabel className="text-xs">IP</FormLabel>
+                      <FormControl>
+                        <Input className="h-9" placeholder="192.168.1.10" {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <div className="gap-1">
+                  <FormLabel className="text-xs">Photo</FormLabel>
+                  <div className="mt-1 flex items-center gap-2">
+                    {photoPreview ? (
+                      <div className="relative size-10 shrink-0 overflow-hidden rounded border">
+                        <Image
+                          src={photoPreview}
+                          alt="Aperçu"
+                          fill
+                          unoptimized
+                          className="object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPhotoPreview(null);
+                            form.setValue("photo_url", undefined);
+                          }}
+                          className="bg-destructive absolute top-0 right-0 rounded-bl p-0.5 text-white"
+                        >
+                          <X className="size-2.5" />
+                        </button>
+                      </div>
+                    ) : null}
+                    <label className="cursor-pointer">
+                      <div className="hover:bg-accent inline-flex h-9 items-center gap-1.5 rounded-md border px-2.5 text-xs">
+                        <Upload className="size-3.5" />
+                        {uploadingPhoto ? "Upload…" : "Choisir"}
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={uploadingPhoto}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            setUploadingPhoto(true);
+                            const url = await uploadMaterielPhoto(file);
+                            if (url) {
+                              setPhotoPreview(url);
+                              form.setValue("photo_url", url);
+                              toast.success("Photo téléversée");
+                            } else {
+                              toast.error("Erreur lors de l'upload");
+                            }
+                          } catch {
+                            toast.error("Erreur lors de l'upload");
+                          } finally {
+                            setUploadingPhoto(false);
+                            e.target.value = "";
+                          }
+                        }}
+                      />
+                    </label>
                   </div>
-                )}
-                <label className="cursor-pointer">
-                  <div className="flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-accent w-fit">
-                    <Upload className="h-4 w-4" />
-                    <span className="text-sm">
-                      {uploadingPhoto ? "Téléversement en cours..." : "Choisir une photo"}
-                    </span>
-                  </div>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    disabled={uploadingPhoto}
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-
-                      try {
-                        setUploadingPhoto(true);
-                        const url = await uploadMaterielPhoto(file);
-                        if (url) {
-                          setPhotoPreview(url);
-                          form.setValue("photo_url", url);
-                          toast.success("Photo téléversée");
-                        } else {
-                          toast.error("Erreur lors de l'upload");
-                        }
-                      } catch {
-                        toast.error("Erreur lors de l'upload");
-                      } finally {
-                        setUploadingPhoto(false);
-                        e.target.value = "";
-                      }
-                    }}
-                  />
-                </label>
+                </div>
+                <FormField
+                  control={form.control}
+                  name="observations"
+                  render={({ field }) => (
+                    <FormItem className="gap-1 sm:col-span-2 lg:col-span-3">
+                      <FormLabel className="text-xs">Observations</FormLabel>
+                      <FormControl>
+                        <Textarea rows={2} className="min-h-0 resize-none" {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
               </div>
-            </div>
+            </details>
 
-            <FormField
-              control={form.control}
-              name="observations"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Observations</FormLabel>
-                  <FormControl>
-                    <Textarea rows={4} {...field} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <DialogFooter className="mt-1 gap-2 sm:justify-end">
+              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)}>
                 Annuler
               </Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Enregistrement..." : mode === "edit" ? "Modifier" : "Ajouter"}
+              <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting
+                  ? "Enregistrement..."
+                  : mode === "edit"
+                    ? "Modifier"
+                    : "Ajouter"}
               </Button>
             </DialogFooter>
           </form>

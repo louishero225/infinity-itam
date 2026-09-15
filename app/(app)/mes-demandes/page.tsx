@@ -1,22 +1,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { LifeBuoy } from "lucide-react";
 
-import { PageHeader } from "@/components/app/page-header";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { ITSM_CATEGORIES, ITSM_ENTITES, ITSM_PRIORITES } from "@/lib/itsm/constants";
+  ItsmStatutBadge,
+  ticketRefLabel,
+} from "@/components/app/itsm/itsm-status";
+import { ItsmSlaClock } from "@/components/app/itsm/itsm-sla-clock";
+import { ServiceCatalogForm } from "@/components/app/itsm/service-catalog-form";
+import { Button } from "@/components/ui/button";
 import { employeDisplayName } from "@/lib/utils/employe-matching";
+import { cn } from "@/lib/utils";
 
 import { createDemandeFromForm, listMesDemandes } from "./actions";
 
@@ -31,156 +25,122 @@ export default async function MesDemandesPage({
   });
 
   if (!access.canRequestTicket) {
-    redirect("/dashboard");
+    redirect("/login?redirectTo=/mes-demandes");
   }
 
+  const openCount = tickets.filter((t) => t.statut === "Ouvert" || t.statut === "En cours").length;
+
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-      <PageHeader
-        title="Mes demandes"
-        description="Soumettez une demande au support IT et suivez son traitement."
-      />
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+      <header className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-slate-50 via-white to-sky-50 px-6 py-7 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-40"
+          aria-hidden
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 90% 10%, rgb(14 165 233 / 0.15), transparent 45%)",
+          }}
+        />
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex gap-3">
+            <div className="bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200 flex size-11 shrink-0 items-center justify-center rounded-xl">
+              <LifeBuoy className="size-5" />
+            </div>
+            <div>
+              <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.14em] uppercase">
+                Portail collaborateur
+              </p>
+              <h1 className="text-2xl font-semibold tracking-tight">Mes demandes</h1>
+              <p className="text-muted-foreground mt-1 max-w-lg text-sm">
+                {employe
+                  ? `${employeDisplayName(employe.prenom, employe.nom)} · ${employe.departement}`
+                  : access.email
+                    ? `Compte ${access.email}`
+                    : "Catalogue de services IT"}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-4 text-sm">
+            <div>
+              <p className="text-muted-foreground text-xs">Ouvertes</p>
+              <p className="text-xl font-semibold tabular-nums">{openCount}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-xs">Total</p>
+              <p className="text-xl font-semibold tabular-nums">{tickets.length}</p>
+            </div>
+          </div>
+        </div>
+      </header>
 
       {params.created ? (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-100">
-          Votre demande a bien été envoyée. L&apos;équipe IT vous répondra dès que possible.
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-100">
+          Demande envoyée. L&apos;équipe IT vous répondra dès que possible.
         </div>
       ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Nouvelle demande</CardTitle>
-          <CardDescription>
-            {employe
-              ? `Connecté en tant que ${employeDisplayName(employe.prenom, employe.nom)} · ${employe.departement}`
-              : access.email
-                ? `Compte : ${access.email}. Associez votre email à votre fiche collaborateur pour un suivi complet.`
-                : "Décrivez votre besoin ci-dessous."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form action={createDemandeFromForm} className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="categorie">Catégorie</Label>
-              <select
-                id="categorie"
-                name="categorie"
-                defaultValue="Général"
-                className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-                required
-              >
-                {ITSM_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
+      <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+        <ServiceCatalogForm
+          action={createDemandeFromForm}
+          contactEmail={access.email}
+          defaultEntite={employe?.site && ["IAC", "IAF", "IAP", "IAV", "IAT", "IAG"].includes(employe.site) ? employe.site : "IAG"}
+        />
 
-            <div className="space-y-2">
-              <Label htmlFor="priorite">Urgence</Label>
-              <select
-                id="priorite"
-                name="priorite"
-                defaultValue="Normal"
-                className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-              >
-                {ITSM_PRIORITES.filter((p) => p !== "Non défini").map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="entite">Entité / site</Label>
-              <select
-                id="entite"
-                name="entite"
-                defaultValue="IAG"
-                className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-              >
-                {ITSM_ENTITES.map((e) => (
-                  <option key={e} value={e}>
-                    {e}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="description">Description du besoin</Label>
-              <Textarea
-                id="description"
-                name="description"
-                rows={5}
-                required
-                placeholder="Ex. Mon PC ne démarre plus, j’ai besoin d’un reset mot de passe Outlook…"
-              />
-            </div>
-
-            {access.email ? (
-              <input type="hidden" name="contact_email" value={access.email} />
-            ) : null}
-
-            <div className="sm:col-span-2">
-              <Button type="submit">Envoyer ma demande</Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Historique</CardTitle>
-          <CardDescription>Vos dernières demandes de support</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Catégorie</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {tickets.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-muted-foreground py-8 text-center">
-                    Aucune demande pour le moment.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                tickets.map((t) => (
-                  <TableRow key={t.id}>
-                    <TableCell className="whitespace-nowrap">
-                      {t.date} {String(t.heure_creation).slice(0, 5)}
-                    </TableCell>
-                    <TableCell>{t.categorie}</TableCell>
-                    <TableCell>
-                      <Badge variant={t.en_retard ? "destructive" : "secondary"}>{t.statut}</Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground max-w-[220px] truncate text-sm">
-                      {t.description ?? "—"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {access.isStaff ? (
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/itsm/tickets/${t.id}`}>Détail</Link>
-                        </Button>
-                      ) : null}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+        <section className="rounded-xl border bg-card shadow-sm">
+          <div className="border-b px-5 py-4">
+            <h2 className="text-sm font-semibold">Suivi</h2>
+            <p className="text-muted-foreground mt-0.5 text-xs">Vos dernières demandes</p>
+          </div>
+          <div className="divide-y">
+            {tickets.length === 0 ? (
+              <p className="text-muted-foreground px-5 py-10 text-center text-sm">
+                Aucune demande — choisissez un service dans le catalogue.
+              </p>
+            ) : (
+              tickets.map((t) => (
+                <div
+                  key={t.id}
+                  className={cn(
+                    "flex flex-col gap-2 px-5 py-3.5",
+                    t.en_retard && "bg-red-50/40 dark:bg-red-950/10"
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{t.categorie}</p>
+                      <p className="text-muted-foreground font-mono text-[11px] tabular-nums">
+                        {ticketRefLabel(t)} · {t.date}
+                      </p>
+                    </div>
+                    <ItsmStatutBadge statut={t.statut} />
+                  </div>
+                  <ItsmSlaClock
+                    date={t.date}
+                    heure_creation={t.heure_creation}
+                    resolved_at={t.resolved_at}
+                    statut={t.statut}
+                    priorite={t.priorite}
+                    compact
+                  />
+                  <p className="text-muted-foreground line-clamp-2 text-xs">
+                    {t.description ?? "—"}
+                  </p>
+                  {access.isStaff ? (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="h-auto self-start px-0 text-xs"
+                      asChild
+                    >
+                      <Link href={`/itsm/tickets/${t.id}`}>Voir en console</Link>
+                    </Button>
+                  ) : null}
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

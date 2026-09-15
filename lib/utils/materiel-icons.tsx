@@ -16,14 +16,17 @@ import {
   HardDrive,
   Phone,
   Plane,
+  Cable,
+  PcCase,
   type LucideIcon,
 } from "lucide-react";
 
 import { normalizeMaterielType } from "@/lib/utils/materiel-taxonomy";
 
-const ICON_BY_TYPE: Record<string, LucideIcon> = {
+/** Icône Lucide par type matériel canonique */
+export const ICON_BY_TYPE: Record<string, LucideIcon> = {
   "Ordinateur Portable": Laptop,
-  "Ordinateur Fixe": Monitor,
+  "Ordinateur Fixe": PcCase,
   Moniteur: Monitor,
   Smartphone: Smartphone,
   Téléphone: Smartphone,
@@ -37,6 +40,7 @@ const ICON_BY_TYPE: Record<string, LucideIcon> = {
   Drone: Plane,
   Stockage: HardDrive,
   "Poste VOIP": Phone,
+  Accessoire: Cable,
   Routeur: Router,
   Switch: Network,
   Onduleur: Zap,
@@ -49,40 +53,16 @@ export function getMaterielIcon(type: string): LucideIcon {
   return ICON_BY_TYPE[canonical] ?? ICON_BY_TYPE[type] ?? HelpCircle;
 }
 
-export function MaterielIcon({ type, className = "h-4 w-4" }: { type: string; className?: string }) {
-  switch (normalizeMaterielType(type)) {
-    case "Ordinateur Portable":
-      return <Laptop className={className} />;
-    case "Ordinateur Fixe":
-      return <Monitor className={className} />;
-    case "Moniteur":
-      return <Monitor className={className} />;
-    case "Smartphone":
-      return <Smartphone className={className} />;
-    case "Tablet":
-      return <Tablet className={className} />;
-    case "Imprimante":
-      return <Printer className={className} />;
-    case "Réseau":
-      return <Router className={className} />;
-    case "Sécurité":
-      return <Shield className={className} />;
-    case "Batterie / Énergie":
-      return <Battery className={className} />;
-    case "Équipement AV / Studio":
-      return <Video className={className} />;
-    case "Serveur":
-      return <Server className={className} />;
-    case "Drone":
-      return <Plane className={className} />;
-    case "Stockage":
-      return <HardDrive className={className} />;
-    case "Poste VOIP":
-      return <Phone className={className} />;
-    default:
-      return <HelpCircle className={className} />;
-  }
+export function MaterielIcon({
+  type,
+  className = "h-4 w-4",
+}: {
+  type: string;
+  className?: string;
+}) {
+  const Icon = getMaterielIcon(type);
+  return <Icon className={className} aria-hidden />;
 }
 
-/** @deprecated Utiliser MaterielIcon */
+/** @deprecated Utiliser ICON_BY_TYPE / getMaterielIcon */
 export const MATERIEL_ICONS = ICON_BY_TYPE;

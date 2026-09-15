@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FicheRemiseMateriel } from "./fiche-remise-materiel";
 import { FicheReceptionMateriel } from "./fiche-reception-materiel";
-import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { FileText, Loader2 } from "lucide-react";
 
 type FicheData = {
   attribution_id: string;
@@ -25,53 +26,63 @@ type FicheData = {
   beneficiaire_type: string;
 };
 
+/** Charge la fiche à la demande (évite N appels API au chargement du tableau). */
 export function FichesButtons({ attributionId }: { attributionId: string }) {
   const [data, setData] = useState<FicheData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true);
-        const response = await fetch(`/api/attributions/${attributionId}/fiche`);
-        if (!response.ok) {
-          throw new Error("Erreur lors du chargement des données");
-        }
-        const result = await response.json();
-        setData(result);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Erreur inconnue");
-      } finally {
-        setLoading(false);
-      }
+  async function ensureLoaded() {
+    if (data || loading) return data;
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/attributions/${attributionId}/fiche`);
+      if (!response.ok) throw new Error("Erreur de chargement");
+      const result = (await response.json()) as FicheData;
+      setData(result);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur");
+      return null;
+    } finally {
+      setLoading(false);
     }
+  }
 
-    fetchData();
-  }, [attributionId]);
-
-  if (loading) {
+  if (error && !data) {
     return (
-      <div className="flex gap-2">
-        <Loader2 className="h-4 w-4 animate-spin" />
+      <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => void ensureLoaded()}>
+        Réessayer
+      </Button>
+    );
+  }
+
+  if (data) {
+    return (
+      <div className="flex flex-wrap gap-2">
+        <FicheRemiseMateriel data={data} />
+        <FicheReceptionMateriel data={data} />
+        <a
+          href={`/api/attributions/${attributionId}/pdf`}
+          className="text-muted-foreground hover:text-foreground inline-flex items-center text-xs underline"
+        >
+          PDF
+        </a>
       </div>
     );
   }
 
-  if (error || !data) {
-    return <span className="text-xs text-muted-foreground">—</span>;
-  }
-
   return (
-    <div className="flex gap-2">
-      <FicheRemiseMateriel data={data} />
-      <FicheReceptionMateriel data={data} />
-      <a
-        href={`/api/attributions/${attributionId}/pdf`}
-        className="text-muted-foreground hover:text-foreground inline-flex items-center text-xs underline"
-      >
-        PDF
-      </a>
-    </div>
+    <Button
+      variant="outline"
+      size="sm"
+      className="h-8 gap-1 text-xs"
+      disabled={loading}
+      onClick={() => void ensureLoaded()}
+    >
+      {loading ? <Loader2 className="size-3.5 animate-spin" /> : <FileText className="size-3.5" />}
+      Fiches
+    </Button>
   );
 }

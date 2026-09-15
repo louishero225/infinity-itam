@@ -6,6 +6,7 @@ import { DataTable } from "@/components/app/data-table";
 import { MaterielFormDialog } from "@/components/app/materiels/materiel-form-dialog";
 import { Badge } from "@/components/ui/badge";
 import { MaterielIcon } from "@/lib/utils/materiel-icons";
+import { AccessoireSousIcon } from "@/lib/utils/accessoire-sous-categories";
 import {
   normalizeMaterielStatut,
   STATUT_BADGE_CLASS,
@@ -26,6 +27,7 @@ type MaterielRow = {
   id: string;
   code_materiel: string;
   type: string;
+  sous_categorie?: string | null;
   marque: string | null;
   modele: string | null;
   numero_serie: string | null;
@@ -63,13 +65,21 @@ export function MaterielsTable({ rows }: { rows: MaterielRow[] }) {
           key: "type",
           header: "Type",
           cell: (r) => (
-            <div className="flex items-center gap-2">
-              <MaterielIcon type={r.type} className="h-4 w-4 text-muted-foreground" />
-              <span>{r.type}</span>
+            <div className="flex flex-col gap-0.5">
+              <div className="flex items-center gap-2">
+                <MaterielIcon type={r.type} className="h-4 w-4 text-muted-foreground" />
+                <span>{r.type}</span>
+              </div>
+              {r.type === "Accessoire" && r.sous_categorie ? (
+                <div className="text-muted-foreground flex items-center gap-1.5 pl-6 text-xs">
+                  <AccessoireSousIcon sous={r.sous_categorie} className="size-3.5" />
+                  {r.sous_categorie}
+                </div>
+              ) : null}
             </div>
           ),
-          searchableText: (r) => r.type,
-          sortValue: (r) => r.type,
+          searchableText: (r) => `${r.type} ${r.sous_categorie ?? ""}`,
+          sortValue: (r) => `${r.type} ${r.sous_categorie ?? ""}`,
         },
         {
           key: "marque_modele",
@@ -119,6 +129,7 @@ export function MaterielsTable({ rows }: { rows: MaterielRow[] }) {
                 id: r.id,
                 code_materiel: r.code_materiel,
                 type: r.type,
+                sous_categorie: r.sous_categorie ?? undefined,
                 marque: r.marque ?? undefined,
                 modele: r.modele ?? undefined,
                 numero_serie: r.numero_serie ?? undefined,

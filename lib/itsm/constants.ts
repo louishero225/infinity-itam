@@ -30,6 +30,36 @@ export const ITSM_CANAUX = ["Téléphone", "Verbal", "Email", "ManageEngine", "P
 
 export const DEFAULT_TECHNICIAN = "Guillaume BADOU";
 
+/** Agents assignables (console). */
+export const ITSM_TECHNICIENS = [
+  DEFAULT_TECHNICIAN,
+  "Non assigné",
+] as const;
+
+/** Macros / réponses rapides type Zendesk. */
+export const ITSM_QUICK_REPLIES = [
+  {
+    id: "prise-en-charge",
+    label: "Prise en charge",
+    body: "Bonjour,\n\nVotre demande a bien été prise en charge. Nous revenons vers vous rapidement.\n\nCordialement,\nSupport IT",
+  },
+  {
+    id: "info-manquante",
+    label: "Infos manquantes",
+    body: "Bonjour,\n\nPour avancer, merci de préciser :\n- Symptôme exact\n- Depuis quand\n- Capture d'écran si possible\n\nCordialement,\nSupport IT",
+  },
+  {
+    id: "resolu",
+    label: "Résolu",
+    body: "Bonjour,\n\nVotre demande est traitée. N'hésitez pas à rouvrir un ticket si le problème persiste.\n\nCordialement,\nSupport IT",
+  },
+  {
+    id: "en-attente",
+    label: "En attente utilisateur",
+    body: "Bonjour,\n\nNous attendons un retour de votre part pour poursuivre le traitement.\n\nCordialement,\nSupport IT",
+  },
+] as const;
+
 export const MANAGEENGINE_CAT_MAP: Record<string, string> = {
   "Poste de travail": "Poste de travail",
   Impression: "Poste de travail",

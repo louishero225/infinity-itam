@@ -15,6 +15,7 @@ export const MATERIEL_TYPES = [
   "Drone",
   "Stockage",
   "Poste VOIP",
+  "Accessoire",
 ] as const;
 
 export type MaterielType = (typeof MATERIEL_TYPES)[number];
@@ -43,6 +44,16 @@ const TYPE_ALIASES: Record<string, MaterielType | string> = {
   stockage: "Stockage",
   voip: "Poste VOIP",
   "poste voip": "Poste VOIP",
+  accessoire: "Accessoire",
+  accessoires: "Accessoire",
+  peripherique: "Accessoire",
+  peripheriques: "Accessoire",
+  souris: "Accessoire",
+  clavier: "Accessoire",
+  chargeur: "Accessoire",
+  casque: "Accessoire",
+  hub: "Accessoire",
+  cable: "Accessoire",
 };
 
 /** Préfixes legacy → préfixe IAG canonique */
@@ -101,6 +112,7 @@ export const TYPE_CODE_PREFIX: Record<string, string> = {
   Drone: "IAG-DRO",
   Stockage: "IAG-STO",
   "Poste VOIP": "IAG-VOIP",
+  Accessoire: "IAG-ACC",
 };
 
 export function codePrefixForType(type: string) {

@@ -416,6 +416,7 @@ export type Database = {
           salle: string | null
           site: string | null
           statut: string | null
+          sous_categorie: string | null
           type: string
         }
         Insert: {
@@ -436,6 +437,7 @@ export type Database = {
           salle?: string | null
           site?: string | null
           statut?: string | null
+          sous_categorie?: string | null
           type: string
         }
         Update: {
@@ -456,6 +458,7 @@ export type Database = {
           salle?: string | null
           site?: string | null
           statut?: string | null
+          sous_categorie?: string | null
           type?: string
         }
         Relationships: []
